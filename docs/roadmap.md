@@ -6,7 +6,7 @@ start a later stage before the current commit is reviewed and pushed.
 | Stage | Deliverable                                                                           | Suggested commit                                              |
 | ----- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
 | 1     | Workspace, basic API packages, Fastify `GET /health`, pgvector Compose, CI and README | `chore: bootstrap HookLens workspace and API`                 |
-| 2     | Prisma schema and migration for events, deliveries and attempts                       | `feat(api): add webhook delivery data model`                  |
+| 2     | Prisma schema, pgvector extension and migration for events, deliveries and attempts   | `feat(api): add webhook delivery data model`                  |
 | 3     | Fastify intake, delivery list/detail endpoints and seed data                          | `feat(api): add webhook intake and delivery queries`          |
 | 4     | Operator retry guard, idempotency, limits and audit log                               | `feat(api): add safe webhook retry workflow`                  |
 | 5     | Markdown documents, parser, heading chunking and embeddings                           | `feat(rag): ingest knowledge documents into pgvector`         |

@@ -1,0 +1,57 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum DeliveryStatus {
+  pending
+  delivered
+  failed
+}
+
+model WebhookEvent {
+  id        String            @id @default(uuid())
+  eventType String
+  payload   Json
+  createdAt DateTime          @default(now())
+  deliveries WebhookDelivery[]
+
+  @@index([eventType, createdAt])
+}
+
+model WebhookDelivery {
+  id               String            @id @default(uuid())
+  eventId          String
+  targetUrl        String
+  status           DeliveryStatus    @default(pending)
+  requestHeaders   Json              @default("{}")
+  lastHttpStatus   Int?
+  lastResponseBody String?
+  retryCount       Int               @default(0)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  event            WebhookEvent      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  attempts         DeliveryAttempt[]
+
+  @@index([eventId])
+  @@index([status, createdAt])
+}
+
+model DeliveryAttempt {
+  id            String          @id @default(uuid())
+  deliveryId    String
+  attemptNumber Int
+  status        DeliveryStatus
+  httpStatus    Int?
+  responseBody  String?
+  durationMs    Int?
+  createdAt     DateTime        @default(now())
+  delivery      WebhookDelivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+
+  @@unique([deliveryId, attemptNumber])
+  @@index([deliveryId, createdAt])
+}

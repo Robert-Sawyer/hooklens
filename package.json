@@ -13,7 +13,9 @@
     "build": "pnpm --filter @hooklens/api build",
     "check": "pnpm format:check && pnpm --filter @hooklens/api lint",
     "db:up": "docker compose up -d db",
-    "db:down": "docker compose down"
+    "db:down": "docker compose down",
+    "db:generate": "pnpm --filter @hooklens/api db:generate",
+    "db:migrate": "pnpm --filter @hooklens/api db:migrate"
   },
   "devDependencies": {
     "prettier": "^3.5.3"
