@@ -20,25 +20,34 @@ PostgreSQL with pgvector, and Markdown source files in `knowledge/`.
 
 ## Current stage
 
-**Stage 1 is intentionally small and commit-ready.** It provides the workspace,
-PostgreSQL + pgvector Docker service, baseline CI and a minimal Fastify API with
-`GET /health`. It does not yet contain webhook domain logic, RAG, MCP or UI.
+**Stage 2 adds the data model.** Prisma now defines webhook events, deliveries
+and individual delivery attempts. The migration enables pgvector and creates the
+initial PostgreSQL tables and indexes. Webhook endpoints, RAG, MCP and UI remain
+intentionally out of scope for this branch.
 
-1. Copy `.env.example` to `.env`.
+1. In PowerShell, run `Copy-Item .env.example .env`.
 2. Run `pnpm install`.
 3. Run `pnpm dev`, then open `http://localhost:4000/health`.
-4. Optionally run `pnpm db:up` to verify the database container.
-5. Run `pnpm check && pnpm build`.
+4. Ensure Docker Desktop is running, then run `pnpm db:up`.
+5. Run `pnpm db:generate && pnpm db:migrate`.
+6. Run `pnpm check && pnpm build`.
+
+The Prisma commands use Node 22 to read `DATABASE_URL` directly from the root
+`.env` file, so the first step must be completed before generating the client or
+applying migrations. The project maps its container to port `5433` to avoid
+colliding with a local PostgreSQL instance on the standard port `5432`.
 
 ## Useful commands
 
-| Command        | Purpose                                         |
-| -------------- | ----------------------------------------------- |
-| `pnpm check`   | Check formatting for the current stage          |
-| `pnpm dev`     | Run the minimal Fastify API at port 4000        |
-| `pnpm build`   | Compile the current API                         |
-| `pnpm db:up`   | Start the local PostgreSQL + pgvector container |
-| `pnpm db:down` | Stop the local database container               |
+| Command            | Purpose                                         |
+| ------------------ | ----------------------------------------------- |
+| `pnpm check`       | Check formatting for the current stage          |
+| `pnpm dev`         | Run the minimal Fastify API at port 4000        |
+| `pnpm build`       | Compile the current API                         |
+| `pnpm db:up`       | Start the local PostgreSQL + pgvector container |
+| `pnpm db:down`     | Stop the local database container               |
+| `pnpm db:generate` | Generate the Prisma Client from the schema      |
+| `pnpm db:migrate`  | Apply committed Prisma migrations               |
 
 ## Delivery plan and development log
 
@@ -67,6 +76,21 @@ previous one is committed.
 - Added a minimal Fastify API with `GET /health`.
 - Documented the target architecture and the small, sequential delivery plan.
 - Next: model the webhook and delivery tables with Prisma.
+
+### Day 2 - Data model
+
+- Added Prisma, the PostgreSQL schema and a committed migration.
+- Modelled `WebhookEvent`, `WebhookDelivery` and `DeliveryAttempt`, including
+  delivery state, event relations, attempt ordering and query indexes.
+- Enabled the pgvector extension now; embedding tables are deliberately planned
+  for the later RAG stage.
+- Mapped the development database to port `5433` to avoid a local PostgreSQL
+  collision on port `5432`.
+- Made every Prisma command load the root `.env` through Node 22, without
+  relying on a separate `dotenv` executable.
+- Verified Prisma Client generation, TypeScript compilation and migration status
+  against the local Docker PostgreSQL instance on port `5433`.
+- Next: receive webhooks and expose delivery list/detail API endpoints.
 
 ## Development-log template
 

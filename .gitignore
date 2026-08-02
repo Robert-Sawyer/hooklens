@@ -1,4 +1,5 @@
 node_modules
+.pnpm-store
 .next
 dist
 coverage
@@ -6,4 +7,3 @@ coverage
 .env.local
 *.log
 prisma/dev.db
-
