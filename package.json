@@ -1,0 +1,21 @@
+{
+  "name": "hooklens",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.17.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "dev": "pnpm --filter @hooklens/api dev",
+    "build": "pnpm --filter @hooklens/api build",
+    "check": "pnpm format:check && pnpm --filter @hooklens/api lint",
+    "db:up": "docker compose up -d db",
+    "db:down": "docker compose down"
+  },
+  "devDependencies": {
+    "prettier": "^3.5.3"
+  }
+}
