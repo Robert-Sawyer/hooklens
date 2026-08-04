@@ -16,5 +16,8 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Prisma generate reads DATABASE_URL but does not connect to PostgreSQL.
+      - run: cp .env.example .env
+      - run: pnpm db:generate
       - run: pnpm check
       - run: pnpm build
