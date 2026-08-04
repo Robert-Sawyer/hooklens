@@ -13,29 +13,35 @@ enum DeliveryStatus {
   failed
 }
 
+enum RetryAuditOutcome {
+  queued
+  rejected
+}
+
 model WebhookEvent {
-  id        String            @id @default(uuid())
-  eventType String
-  payload   Json
-  createdAt DateTime          @default(now())
+  id         String            @id @default(uuid())
+  eventType  String
+  payload    Json
+  createdAt  DateTime          @default(now())
   deliveries WebhookDelivery[]
 
   @@index([eventType, createdAt])
 }
 
 model WebhookDelivery {
-  id               String            @id @default(uuid())
+  id               String               @id @default(uuid())
   eventId          String
   targetUrl        String
-  status           DeliveryStatus    @default(pending)
-  requestHeaders   Json              @default("{}")
+  status           DeliveryStatus       @default(pending)
+  requestHeaders   Json                 @default("{}")
   lastHttpStatus   Int?
   lastResponseBody String?
-  retryCount       Int               @default(0)
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  event            WebhookEvent      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  retryCount       Int                  @default(0)
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  event            WebhookEvent         @relation(fields: [eventId], references: [id], onDelete: Cascade)
   attempts         DeliveryAttempt[]
+  retryAudits      DeliveryRetryAudit[]
 
   @@index([eventId])
   @@index([status, createdAt])
@@ -53,5 +59,22 @@ model DeliveryAttempt {
   delivery      WebhookDelivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
 
   @@unique([deliveryId, attemptNumber])
+  @@index([deliveryId, createdAt])
+}
+
+model DeliveryRetryAudit {
+  id                  String            @id @default(uuid())
+  deliveryId          String?
+  requestedDeliveryId String
+  actorRole           String
+  idempotencyKey      String
+  outcome             RetryAuditOutcome
+  reason              String?
+  attemptNumber       Int?
+  retryCountAfter     Int?
+  createdAt           DateTime          @default(now())
+  delivery            WebhookDelivery?  @relation(fields: [deliveryId], references: [id], onDelete: SetNull)
+
+  @@unique([requestedDeliveryId, idempotencyKey])
   @@index([deliveryId, createdAt])
 }

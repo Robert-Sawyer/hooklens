@@ -38,5 +38,11 @@ export const deliveryIdParamsSchema = z.object({
   deliveryId: z.string().uuid(),
 });
 
+export const retryDeliverySchema = z.object({
+  confirmed: z.boolean(),
+  idempotencyKey: z.string().uuid(),
+});
+
 export type IntakeWebhookInput = z.infer<typeof intakeWebhookSchema>;
 export type DeliveryListQuery = z.infer<typeof deliveryListQuerySchema>;
+export type RetryDeliveryInput = z.infer<typeof retryDeliverySchema>;

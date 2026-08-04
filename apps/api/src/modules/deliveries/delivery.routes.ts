@@ -5,7 +5,15 @@ import {
   deliveryIdParamsSchema,
   deliveryListQuerySchema,
   intakeWebhookSchema,
+  retryDeliverySchema,
 } from "./delivery.schemas.js";
+import {
+  requestDeliveryRetry,
+  resolveRetryActorRole,
+  retryRejectionMessages,
+  retryRejectionStatus,
+  retryRoleHeader,
+} from "./retry.service.js";
 
 function sendValidationError(reply: FastifyReply, error: ZodError) {
   return reply.status(400).send({
@@ -73,5 +81,50 @@ export async function deliveryRoutes(app: FastifyInstance) {
     }
 
     return reply.send({ data: delivery });
+  });
+
+  app.post("/api/v1/deliveries/:deliveryId/retry", async (request, reply) => {
+    const parsedParams = deliveryIdParamsSchema.safeParse(request.params);
+    const parsedBody = retryDeliverySchema.safeParse(request.body);
+
+    if (!parsedParams.success) {
+      return sendValidationError(reply, parsedParams.error);
+    }
+
+    if (!parsedBody.success) {
+      return sendValidationError(reply, parsedBody.error);
+    }
+
+    const result = await requestDeliveryRetry({
+      ...parsedBody.data,
+      deliveryId: parsedParams.data.deliveryId,
+      actorRole: resolveRetryActorRole(request.headers[retryRoleHeader]),
+    });
+
+    if (result.kind === "rejected") {
+      return reply.status(retryRejectionStatus(result.reason)).send({
+        error: {
+          code: result.reason,
+          message: retryRejectionMessages[result.reason],
+          auditId: result.auditId,
+        },
+        meta: {
+          idempotentReplay: result.replayed,
+        },
+      });
+    }
+
+    return reply.status(result.replayed ? 200 : 202).send({
+      data: {
+        deliveryId: result.deliveryId,
+        status: "pending",
+        attemptNumber: result.attemptNumber,
+        retryCount: result.retryCount,
+        auditId: result.auditId,
+      },
+      meta: {
+        idempotentReplay: result.replayed,
+      },
+    });
   });
 }

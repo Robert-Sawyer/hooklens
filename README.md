@@ -20,10 +20,10 @@ PostgreSQL with pgvector, and Markdown source files in `knowledge/`.
 
 ## Current stage
 
-**Stage 3 exposes the first operational API.** The service can now record a
-webhook delivery with its initial attempt, list deliveries and return a delivery
-with its event and complete attempt history. The endpoint records supplied
-delivery data; it does not send outbound HTTP requests yet.
+**Stage 4 adds a guarded retry request.** An operator can queue one new,
+pending attempt for a failed delivery only after explicit confirmation. Each
+decision is auditable and protected with an idempotency key. Outbound HTTP
+delivery remains intentionally disabled.
 
 1. In PowerShell, run `Copy-Item .env.example .env`.
 2. Run `pnpm install`.
@@ -55,11 +55,12 @@ colliding with a local PostgreSQL instance on the standard port `5432`.
 
 The API runs at `http://localhost:4000`.
 
-| Method | Path                             | Purpose                                                                |
-| ------ | -------------------------------- | ---------------------------------------------------------------------- |
-| `POST` | `/api/v1/webhooks`               | Record an event, a delivery and its first attempt.                     |
-| `GET`  | `/api/v1/deliveries`             | List deliveries; accepts `page`, `pageSize`, `status` and `eventType`. |
-| `GET`  | `/api/v1/deliveries/:deliveryId` | Return a delivery, its source event and all attempts.                  |
+| Method | Path                                   | Purpose                                                                |
+| ------ | -------------------------------------- | ---------------------------------------------------------------------- |
+| `POST` | `/api/v1/webhooks`                     | Record an event, a delivery and its first attempt.                     |
+| `GET`  | `/api/v1/deliveries`                   | List deliveries; accepts `page`, `pageSize`, `status` and `eventType`. |
+| `GET`  | `/api/v1/deliveries/:deliveryId`       | Return a delivery, its source event and all attempts.                  |
+| `POST` | `/api/v1/deliveries/:deliveryId/retry` | Queue a guarded retry request for a failed delivery.                   |
 
 Example intake request in PowerShell:
 
@@ -78,6 +79,28 @@ Invoke-RestMethod -Method Post -Uri "http://localhost:4000/api/v1/webhooks" -Con
 The seed command creates three idempotent examples, including the `401 Invalid
 signature` scenario used in the later RAG diagnosis work. Copy a delivery ID
 from `GET /api/v1/deliveries` and use it in the detail URL.
+
+## Day 4 retry safety
+
+The retry endpoint records a request and adds a `pending` attempt; it does not
+call the target URL. This keeps the local demo safe while making the retry
+workflow visible and auditable.
+
+For the development-only role check, send `x-hooklens-role: operator`. A missing
+or different value is treated as the read-only `viewer` role. A production
+identity provider replaces this temporary header in a later stage.
+
+```powershell
+$headers = @{ "x-hooklens-role" = "operator" }
+$body = @{ confirmed = $true; idempotencyKey = "6d6a1545-5993-43bb-b5c3-6b27fb9835d1" } | ConvertTo-Json
+
+Invoke-RestMethod -Method Post -Uri "http://localhost:4000/api/v1/deliveries/20000000-0000-4000-8000-000000000001/retry" -Headers $headers -ContentType "application/json" -Body $body
+```
+
+The same idempotency key for the same delivery returns the original outcome
+without creating another attempt. The API rejects retries from viewers, missing
+confirmation, successful or pending deliveries, and deliveries that already
+reached the limit of three retries. Delivery details include `retryAudits`.
 
 ## Delivery plan and development log
 
@@ -131,6 +154,16 @@ previous one is committed.
   scenarios.
 - Added API usage examples and the `pnpm db:seed` command to this README.
 - Next: add a guarded, auditable retry workflow for operators.
+
+### Day 4 - Safe retry workflow
+
+- Added an audit trail and idempotency constraint for retry requests.
+- Added the operator-only retry endpoint with explicit confirmation, delivery
+  state checks and a maximum of three retries.
+- Queued retries create a new `pending` attempt; no external HTTP call is made.
+- Made the seed reset its demo deliveries and retry audit history so retry
+  examples are repeatable.
+- Next: ingest Markdown knowledge documents and store their embeddings.
 
 ## Development-log template
 
