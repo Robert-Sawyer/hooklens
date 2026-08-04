@@ -1,4 +1,5 @@
 import Fastify from "fastify";
+import { deliveryRoutes } from "./modules/deliveries/delivery.routes.js";
 
 export function buildApp() {
   const app = Fastify({ logger: true });
@@ -7,6 +8,8 @@ export function buildApp() {
     status: "ok",
     service: "hooklens-api",
   }));
+
+  app.register(deliveryRoutes);
 
   return app;
 }

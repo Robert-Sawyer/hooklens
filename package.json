@@ -15,7 +15,8 @@
     "db:up": "docker compose up -d db",
     "db:down": "docker compose down",
     "db:generate": "pnpm --filter @hooklens/api db:generate",
-    "db:migrate": "pnpm --filter @hooklens/api db:migrate"
+    "db:migrate": "pnpm --filter @hooklens/api db:migrate",
+    "db:seed": "pnpm --filter @hooklens/api db:seed"
   },
   "devDependencies": {
     "prettier": "^3.5.3"

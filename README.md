@@ -20,17 +20,18 @@ PostgreSQL with pgvector, and Markdown source files in `knowledge/`.
 
 ## Current stage
 
-**Stage 2 adds the data model.** Prisma now defines webhook events, deliveries
-and individual delivery attempts. The migration enables pgvector and creates the
-initial PostgreSQL tables and indexes. Webhook endpoints, RAG, MCP and UI remain
-intentionally out of scope for this branch.
+**Stage 3 exposes the first operational API.** The service can now record a
+webhook delivery with its initial attempt, list deliveries and return a delivery
+with its event and complete attempt history. The endpoint records supplied
+delivery data; it does not send outbound HTTP requests yet.
 
 1. In PowerShell, run `Copy-Item .env.example .env`.
 2. Run `pnpm install`.
-3. Run `pnpm dev`, then open `http://localhost:4000/health`.
-4. Ensure Docker Desktop is running, then run `pnpm db:up`.
-5. Run `pnpm db:generate && pnpm db:migrate`.
-6. Run `pnpm check && pnpm build`.
+3. Ensure Docker Desktop is running, then run `pnpm db:up`.
+4. Run `pnpm db:generate && pnpm db:migrate`.
+5. Run `pnpm db:seed` to add the deterministic demo deliveries.
+6. Run `pnpm dev`, then open `http://localhost:4000/health`.
+7. Run `pnpm check && pnpm build`.
 
 The Prisma commands use Node 22 to read `DATABASE_URL` directly from the root
 `.env` file, so the first step must be completed before generating the client or
@@ -48,6 +49,35 @@ colliding with a local PostgreSQL instance on the standard port `5432`.
 | `pnpm db:down`     | Stop the local database container               |
 | `pnpm db:generate` | Generate the Prisma Client from the schema      |
 | `pnpm db:migrate`  | Apply committed Prisma migrations               |
+| `pnpm db:seed`     | Add or refresh deterministic API demo data      |
+
+## Day 3 API
+
+The API runs at `http://localhost:4000`.
+
+| Method | Path                             | Purpose                                                                |
+| ------ | -------------------------------- | ---------------------------------------------------------------------- |
+| `POST` | `/api/v1/webhooks`               | Record an event, a delivery and its first attempt.                     |
+| `GET`  | `/api/v1/deliveries`             | List deliveries; accepts `page`, `pageSize`, `status` and `eventType`. |
+| `GET`  | `/api/v1/deliveries/:deliveryId` | Return a delivery, its source event and all attempts.                  |
+
+Example intake request in PowerShell:
+
+```powershell
+$body = @{
+  eventType = "payment.completed"
+  payload = @{ paymentId = "pay_local_001"; amount = 4999; currency = "PLN" }
+  targetUrl = "https://receiver.example.test/hooks/payments"
+  requestHeaders = @{ "content-type" = "application/json" }
+  attempt = @{ status = "failed"; httpStatus = 401; responseBody = "Invalid signature"; durationMs = 118 }
+} | ConvertTo-Json -Depth 4
+
+Invoke-RestMethod -Method Post -Uri "http://localhost:4000/api/v1/webhooks" -ContentType "application/json" -Body $body
+```
+
+The seed command creates three idempotent examples, including the `401 Invalid
+signature` scenario used in the later RAG diagnosis work. Copy a delivery ID
+from `GET /api/v1/deliveries` and use it in the detail URL.
 
 ## Delivery plan and development log
 
@@ -91,6 +121,16 @@ previous one is committed.
 - Verified Prisma Client generation, TypeScript compilation and migration status
   against the local Docker PostgreSQL instance on port `5433`.
 - Next: receive webhooks and expose delivery list/detail API endpoints.
+
+### Day 3 - Webhook intake and delivery queries
+
+- Added Zod-validated intake, paginated delivery listing and delivery-detail
+  endpoints to the Fastify API.
+- Added a Prisma repository so database reads and writes remain outside route
+  handlers, together with an idempotent seed script for realistic delivery
+  scenarios.
+- Added API usage examples and the `pnpm db:seed` command to this README.
+- Next: add a guarded, auditable retry workflow for operators.
 
 ## Development-log template
 

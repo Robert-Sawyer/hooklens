@@ -10,12 +10,14 @@
     "lint": "tsc --noEmit -p tsconfig.json",
     "prisma": "node --env-file=../../.env scripts/run-prisma.mjs",
     "db:generate": "node --env-file=../../.env scripts/run-prisma.mjs generate",
-    "db:migrate": "node --env-file=../../.env scripts/run-prisma.mjs migrate deploy"
+    "db:migrate": "node --env-file=../../.env scripts/run-prisma.mjs migrate deploy",
+    "db:seed": "node --env-file=../../.env --import tsx src/scripts/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.0",
     "dotenv": "^16.5.0",
-    "fastify": "^5.3.2"
+    "fastify": "^5.3.2",
+    "zod": "3.24.3"
   },
   "devDependencies": {
     "@types/node": "^22.15.18",
