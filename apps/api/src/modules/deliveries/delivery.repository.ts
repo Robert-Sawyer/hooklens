@@ -26,6 +26,11 @@ const deliveryDetailInclude = {
       attemptNumber: "asc",
     },
   },
+  retryAudits: {
+    orderBy: {
+      createdAt: "asc",
+    },
+  },
 } satisfies Prisma.WebhookDeliveryInclude;
 
 function asJsonObject(value: Record<string, unknown>): Prisma.InputJsonObject {

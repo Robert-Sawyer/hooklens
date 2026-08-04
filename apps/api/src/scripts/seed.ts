@@ -106,11 +106,35 @@ const deliveries: SeedDelivery[] = [
     },
     lastHttpStatus: 504,
     lastResponseBody: "Gateway Timeout",
-    retryCount: 0,
+    retryCount: 3,
     attempts: [
       {
         id: "30000000-0000-4000-8000-000000000004",
         attemptNumber: 1,
+        status: "failed",
+        httpStatus: 504,
+        responseBody: "Gateway Timeout",
+        durationMs: 30_000,
+      },
+      {
+        id: "30000000-0000-4000-8000-000000000006",
+        attemptNumber: 2,
+        status: "failed",
+        httpStatus: 504,
+        responseBody: "Gateway Timeout",
+        durationMs: 30_000,
+      },
+      {
+        id: "30000000-0000-4000-8000-000000000007",
+        attemptNumber: 3,
+        status: "failed",
+        httpStatus: 504,
+        responseBody: "Gateway Timeout",
+        durationMs: 30_000,
+      },
+      {
+        id: "30000000-0000-4000-8000-000000000008",
+        attemptNumber: 4,
         status: "failed",
         httpStatus: 504,
         responseBody: "Gateway Timeout",
@@ -152,6 +176,24 @@ async function main() {
     });
   }
 
+  const seededDeliveryIds = deliveries.map((delivery) => delivery.id);
+
+  await prisma.deliveryRetryAudit.deleteMany({
+    where: {
+      requestedDeliveryId: {
+        in: seededDeliveryIds,
+      },
+    },
+  });
+
+  await prisma.deliveryAttempt.deleteMany({
+    where: {
+      deliveryId: {
+        in: seededDeliveryIds,
+      },
+    },
+  });
+
   for (const delivery of deliveries) {
     await prisma.webhookDelivery.upsert({
       where: { id: delivery.id },
@@ -177,18 +219,9 @@ async function main() {
     });
 
     for (const attempt of delivery.attempts) {
-      await prisma.deliveryAttempt.upsert({
-        where: { id: attempt.id },
-        create: {
+      await prisma.deliveryAttempt.create({
+        data: {
           id: attempt.id,
-          deliveryId: delivery.id,
-          attemptNumber: attempt.attemptNumber,
-          status: attempt.status,
-          httpStatus: attempt.httpStatus,
-          responseBody: attempt.responseBody,
-          durationMs: attempt.durationMs,
-        },
-        update: {
           deliveryId: delivery.id,
           attemptNumber: attempt.attemptNumber,
           status: attempt.status,
