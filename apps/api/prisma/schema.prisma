@@ -18,6 +18,18 @@ enum RetryAuditOutcome {
   rejected
 }
 
+enum KnowledgeCategory {
+  documentation
+  runbook
+  postmortem
+}
+
+enum KnowledgeEmbeddingStatus {
+  pending
+  ready
+  failed
+}
+
 model WebhookEvent {
   id         String            @id @default(uuid())
   eventType  String
@@ -77,4 +89,43 @@ model DeliveryRetryAudit {
 
   @@unique([requestedDeliveryId, idempotencyKey])
   @@index([deliveryId, createdAt])
+}
+
+model KnowledgeDocument {
+  id              String                   @id
+  sourcePath      String                   @unique
+  title           String
+  category        KnowledgeCategory
+  eventTypes      String[]                 @default([])
+  checksum        String
+  embeddingModel  String?
+  embeddingStatus KnowledgeEmbeddingStatus @default(pending)
+  embeddingError  String?
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+  chunks          KnowledgeChunk[]
+
+  @@index([category, updatedAt])
+  @@index([embeddingStatus])
+}
+
+model KnowledgeChunk {
+  id              String                       @id @default(uuid())
+  documentId      String
+  sequence        Int
+  title           String
+  section         String
+  content         String
+  eventTypes      String[]                     @default([])
+  tokenEstimate   Int
+  embedding       Unsupported("vector(1536)")?
+  embeddingModel  String?
+  embeddingStatus KnowledgeEmbeddingStatus     @default(pending)
+  embeddingError  String?
+  createdAt       DateTime                     @default(now())
+  document        KnowledgeDocument            @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, sequence])
+  @@index([documentId, createdAt])
+  @@index([embeddingStatus])
 }

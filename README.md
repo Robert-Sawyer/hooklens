@@ -20,18 +20,21 @@ PostgreSQL with pgvector, and Markdown source files in `knowledge/`.
 
 ## Current stage
 
-**Stage 4 adds a guarded retry request.** An operator can queue one new,
-pending attempt for a failed delivery only after explicit confirmation. Each
-decision is auditable and protected with an idempotency key. Outbound HTTP
-delivery remains intentionally disabled.
+**Stage 5 adds the knowledge-ingestion pipeline.** Markdown documentation is
+split by headings, enriched with metadata, converted into OpenAI embeddings,
+and stored in PostgreSQL with pgvector. Search and AI diagnosis remain the next
+stage.
 
 1. In PowerShell, run `Copy-Item .env.example .env`.
 2. Run `pnpm install`.
 3. Ensure Docker Desktop is running, then run `pnpm db:up`.
 4. Run `pnpm db:generate && pnpm db:migrate`.
 5. Run `pnpm db:seed` to add the deterministic demo deliveries.
-6. Run `pnpm dev`, then open `http://localhost:4000/health`.
-7. Run `pnpm check && pnpm build`.
+6. Add `OPENAI_API_KEY` to the local `.env` before running real knowledge ingest.
+7. Run `pnpm knowledge:ingest -- --dry-run` to validate Markdown files without API calls.
+8. Run `pnpm knowledge:ingest` to store embeddings in the local database.
+9. Run `pnpm dev`, then open `http://localhost:4000/health`.
+10. Run `pnpm check && pnpm build`.
 
 The Prisma commands use Node 22 to read `DATABASE_URL` directly from the root
 `.env` file, so the first step must be completed before generating the client or
@@ -40,16 +43,18 @@ colliding with a local PostgreSQL instance on the standard port `5432`.
 
 ## Useful commands
 
-| Command            | Purpose                                         |
-| ------------------ | ----------------------------------------------- |
-| `pnpm check`       | Check formatting for the current stage          |
-| `pnpm dev`         | Run the minimal Fastify API at port 4000        |
-| `pnpm build`       | Compile the current API                         |
-| `pnpm db:up`       | Start the local PostgreSQL + pgvector container |
-| `pnpm db:down`     | Stop the local database container               |
-| `pnpm db:generate` | Generate the Prisma Client from the schema      |
-| `pnpm db:migrate`  | Apply committed Prisma migrations               |
-| `pnpm db:seed`     | Add or refresh deterministic API demo data      |
+| Command                              | Purpose                                          |
+| ------------------------------------ | ------------------------------------------------ |
+| `pnpm check`                         | Check formatting for the current stage           |
+| `pnpm dev`                           | Run the minimal Fastify API at port 4000         |
+| `pnpm build`                         | Compile the current API                          |
+| `pnpm db:up`                         | Start the local PostgreSQL + pgvector container  |
+| `pnpm db:down`                       | Stop the local database container                |
+| `pnpm db:generate`                   | Generate the Prisma Client from the schema       |
+| `pnpm db:migrate`                    | Apply committed Prisma migrations                |
+| `pnpm db:seed`                       | Add or refresh deterministic API demo data       |
+| `pnpm knowledge:ingest -- --dry-run` | Parse Markdown without writing or calling OpenAI |
+| `pnpm knowledge:ingest`              | Generate embeddings and store knowledge chunks   |
 
 ## Day 3 API
 
@@ -101,6 +106,38 @@ The same idempotency key for the same delivery returns the original outcome
 without creating another attempt. The API rejects retries from viewers, missing
 confirmation, successful or pending deliveries, and deliveries that already
 reached the limit of three retries. Delivery details include `retryAudits`.
+
+## Day 5 knowledge ingestion
+
+The `knowledge/` directory contains eleven fictional integration documents:
+event references, security guides, operational runbooks, and postmortems. Each
+document has frontmatter with its title and related event types. The ingest
+pipeline divides a document into heading-based chunks and preserves the source
+title, section, category, checksum, and event metadata.
+
+Run the parser safely before using the API:
+
+```powershell
+pnpm knowledge:ingest -- --dry-run
+```
+
+For the real ingest, add this only to your ignored local `.env` file:
+
+```text
+OPENAI_API_KEY="your-project-key"
+OPENAI_EMBEDDING_MODEL="text-embedding-3-small"
+```
+
+Then run:
+
+```powershell
+pnpm knowledge:ingest
+```
+
+The default model produces 1536-dimensional vectors, matching the pgvector
+column and HNSW index. Re-running the command skips documents whose checksum,
+embedding model, and chunk count have not changed. Never commit an API key or
+place it in frontend code.
 
 ## Delivery plan and development log
 
@@ -164,6 +201,17 @@ previous one is committed.
 - Made the seed reset its demo deliveries and retry audit history so retry
   examples are repeatable.
 - Next: ingest Markdown knowledge documents and store their embeddings.
+
+### Day 5 - Knowledge ingestion
+
+- Added eleven Markdown knowledge documents across events, security, runbooks,
+  and postmortems.
+- Added heading-based chunking, frontmatter metadata extraction, checksums and
+  a dry-run command that needs neither the database nor an OpenAI key.
+- Added OpenAI embedding generation and pgvector storage with a 1536-dimension
+  HNSW cosine-similarity index.
+- Next: add hybrid retrieval, source-backed failure diagnosis and retrieval
+  evaluation.
 
 ## Development-log template
 

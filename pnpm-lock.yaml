@@ -22,6 +22,9 @@ importers:
       fastify:
         specifier: ^5.3.2
         version: 5.11.0
+      openai:
+        specifier: 6.0.0
+        version: 6.0.0(zod@3.24.3)
       zod:
         specifier: 3.24.3
         version: 3.24.3
@@ -661,6 +664,21 @@ packages:
       }
     engines: { node: ">=14.0.0" }
 
+  openai@6.0.0:
+    resolution:
+      {
+        integrity: sha512-J7LEmTn3WLZnbyEmMYcMPyT5A0fGzhPwSvVUcNRKy6j2hJIbqSFrJERnUHYNkcoCCalRumypnj9AVoe5bVHd3Q==,
+      }
+    hasBin: true
+    peerDependencies:
+      ws: ^8.18.0
+      zod: ^3.25 || ^4.0
+    peerDependenciesMeta:
+      ws:
+        optional: true
+      zod:
+        optional: true
+
   pathe@2.0.3:
     resolution:
       {
@@ -1228,6 +1246,10 @@ snapshots:
   ohash@2.0.11: {}
 
   on-exit-leak-free@2.1.2: {}
+
+  openai@6.0.0(zod@3.24.3):
+    optionalDependencies:
+      zod: 3.24.3
 
   pathe@2.0.3: {}
 
