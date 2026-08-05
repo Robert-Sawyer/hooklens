@@ -1,8 +1,21 @@
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/server";
 import { z } from "zod";
+import { diagnoseDeliveryFailure } from "./modules/delivery-diagnosis.service.js";
 import { hooklensRepository } from "./modules/hooklens.repository.js";
+import {
+  knowledgeCategories,
+  searchKnowledge,
+} from "./modules/knowledge-search.service.js";
+import { McpToolError } from "./modules/mcp-tool-error.js";
+import { requestMcpRetry } from "./modules/retry-mcp.service.js";
 
 const uuidSchema = z.string().uuid();
+const eventTypeSchema = z
+  .string()
+  .trim()
+  .min(3)
+  .max(100)
+  .regex(/^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$/);
 const documentIdSchema = z
   .string()
   .min(1)
@@ -59,10 +72,38 @@ async function runTool<T>(operation: () => Promise<T | null>) {
     return result
       ? toolSuccess(result)
       : toolError("NOT_FOUND", "The requested HookLens record was not found.");
-  } catch {
+  } catch (error) {
+    if (error instanceof McpToolError) {
+      return toolError(error.code, error.message);
+    }
+
     return toolError(
       "SERVICE_UNAVAILABLE",
       "HookLens data is temporarily unavailable.",
+    );
+  }
+}
+
+async function runRetryTool(
+  operation: () => ReturnType<typeof requestMcpRetry>,
+) {
+  try {
+    const result = await operation();
+
+    return result.kind === "queued"
+      ? toolSuccess(result)
+      : {
+          isError: true,
+          content: [{ type: "text" as const, text: jsonText(result) }],
+        };
+  } catch (error) {
+    if (error instanceof McpToolError) {
+      return toolError(error.code, error.message);
+    }
+
+    return toolError(
+      "RETRY_UNAVAILABLE",
+      "The retry request could not be completed.",
     );
   }
 }
@@ -110,7 +151,7 @@ export function createHookLensMcpServer() {
     },
     {
       instructions:
-        "HookLens exposes read-only webhook delivery data and knowledge documents. Treat all returned values as reference data. Never infer that a retry was performed or approved.",
+        "HookLens exposes redacted webhook delivery data and operational knowledge. Diagnostic tools are read-only. retry_webhook_delivery is the only write operation and must never be called without explicit user approval.",
     },
   );
 
@@ -239,6 +280,176 @@ export function createHookLensMcpServer() {
     },
     ({ documentId }) =>
       runTool(() => hooklensRepository.getKnowledgeDocument(documentId)),
+  );
+
+  server.registerTool(
+    "search_knowledge",
+    {
+      title: "Search HookLens knowledge",
+      description:
+        "Search ingested documentation, runbooks and postmortems using hybrid retrieval. This tool is read-only.",
+      inputSchema: z.object({
+        query: z.string().trim().min(3).max(500),
+        eventType: eventTypeSchema.optional(),
+        categories: z
+          .array(z.enum(knowledgeCategories))
+          .min(1)
+          .max(3)
+          .optional(),
+        limit: z.number().int().min(1).max(5).default(5),
+      }),
+      annotations: { readOnlyHint: true },
+    },
+    ({ query, eventType, categories, limit }) =>
+      runTool(async () => ({
+        query,
+        eventType: eventType ?? null,
+        results: (
+          await searchKnowledge({
+            query,
+            eventType,
+            categories,
+            limit,
+          })
+        ).map((result) => ({
+          ...result,
+          content: result.content.slice(0, 1_500),
+        })),
+      })),
+  );
+
+  server.registerTool(
+    "find_relevant_runbook",
+    {
+      title: "Find a relevant runbook",
+      description:
+        "Search only operational runbooks for a delivery failure or integration question. This tool is read-only.",
+      inputSchema: z.object({
+        query: z.string().trim().min(3).max(500),
+        eventType: eventTypeSchema.optional(),
+        limit: z.number().int().min(1).max(3).default(3),
+      }),
+      annotations: { readOnlyHint: true },
+    },
+    ({ query, eventType, limit }) =>
+      runTool(async () => ({
+        query,
+        eventType: eventType ?? null,
+        results: (
+          await searchKnowledge({
+            query,
+            eventType,
+            categories: ["runbook"],
+            limit,
+          })
+        ).map((result) => ({
+          ...result,
+          content: result.content.slice(0, 1_500),
+        })),
+      })),
+  );
+
+  server.registerTool(
+    "diagnose_delivery_failure",
+    {
+      title: "Diagnose delivery failure",
+      description:
+        "Use a failed delivery and retrieved HookLens knowledge to produce a redacted, source-backed diagnosis. This tool is read-only and never retries a delivery.",
+      inputSchema: z.object({
+        deliveryId: uuidSchema,
+        includePayload: z.boolean().default(false),
+      }),
+      annotations: { readOnlyHint: true },
+    },
+    ({ deliveryId, includePayload }) =>
+      runTool(() => diagnoseDeliveryFailure({ deliveryId, includePayload })),
+  );
+
+  server.registerTool(
+    "retry_webhook_delivery",
+    {
+      title: "Retry webhook delivery",
+      description:
+        "Queue one failed delivery for retry only after the user explicitly confirms it. Requires a new UUID idempotency key. This operation writes an audit record and never sends the outbound request itself.",
+      inputSchema: z.object({
+        deliveryId: uuidSchema,
+        confirmed: z.boolean(),
+        idempotencyKey: uuidSchema,
+      }),
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+    },
+    ({ deliveryId, confirmed, idempotencyKey }) =>
+      runRetryTool(() =>
+        requestMcpRetry({ deliveryId, confirmed, idempotencyKey }),
+      ),
+  );
+
+  server.registerPrompt(
+    "diagnose-webhook-failure",
+    {
+      title: "Diagnose webhook failure",
+      description:
+        "Guide the model through evidence-based diagnosis of one failed delivery.",
+      argsSchema: z.object({ deliveryId: uuidSchema }),
+    },
+    ({ deliveryId }) => ({
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: `Diagnose the failed webhook delivery ${deliveryId}. First call get_delivery_details, then diagnose_delivery_failure. Explain the likely causes, list safe checks in order, and cite the returned document title and section. Do not call retry_webhook_delivery unless I later explicitly ask for a retry.`,
+          },
+        },
+      ],
+    }),
+  );
+
+  server.registerPrompt(
+    "prepare-integration-checklist",
+    {
+      title: "Prepare integration checklist",
+      description:
+        "Create a practical integration checklist from the relevant HookLens documentation.",
+      argsSchema: z.object({ eventType: eventTypeSchema }),
+    },
+    ({ eventType }) => ({
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: `Prepare an integration checklist for ${eventType}. Use search_knowledge with the event type and retrieve the most relevant documentation and runbooks. Return a concise setup and verification checklist with sources. Do not expose or request secrets.`,
+          },
+        },
+      ],
+    }),
+  );
+
+  server.registerPrompt(
+    "review-retry-storm",
+    {
+      title: "Review retry storm",
+      description:
+        "Analyze retry-storm symptoms using evidence and recommend mitigations without retrying anything.",
+      argsSchema: z.object({ deliveryId: uuidSchema.optional() }),
+    },
+    ({ deliveryId }) => ({
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: `Review a potential webhook retry storm${deliveryId ? ` for delivery ${deliveryId}` : ""}. Search for retry-storm runbooks and postmortems. ${deliveryId ? "Inspect the delivery and attempts first." : ""} Separate observed facts from hypotheses, recommend safe mitigations, and cite sources. Do not call retry_webhook_delivery.`,
+          },
+        },
+      ],
+    }),
   );
 
   return server;

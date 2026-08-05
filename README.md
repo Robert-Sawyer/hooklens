@@ -20,9 +20,10 @@ PostgreSQL with pgvector, and Markdown source files in `knowledge/`.
 
 ## Current stage
 
-**Stage 7 adds the read-only MCP foundation.** A separate Streamable HTTP
-server exposes redacted delivery data and knowledge documents to compatible AI
-clients without granting any write capability.
+**Stage 8 adds MCP diagnostics and a guarded retry operation.** A separate
+Streamable HTTP server exposes redacted delivery data, knowledge retrieval and
+source-backed diagnosis to compatible AI clients. Retry remains separately
+confirmed and disabled by default.
 
 1. In PowerShell, run `Copy-Item .env.example .env`.
 2. Run `pnpm install`.
@@ -49,7 +50,7 @@ colliding with a local PostgreSQL instance on the standard port `5432`.
 | ------------------------------------ | ------------------------------------------------ |
 | `pnpm check`                         | Check formatting for the current stage           |
 | `pnpm dev`                           | Run the minimal Fastify API at port 4000         |
-| `pnpm mcp:dev`                       | Run the local read-only MCP server at port 4001  |
+| `pnpm mcp:dev`                       | Run the local MCP server at port 4001            |
 | `pnpm mcp:start`                     | Run the compiled MCP server                      |
 | `pnpm build`                         | Compile the API and MCP applications             |
 | `pnpm db:up`                         | Start the local PostgreSQL + pgvector container  |
@@ -60,6 +61,52 @@ colliding with a local PostgreSQL instance on the standard port `5432`.
 | `pnpm knowledge:ingest -- --dry-run` | Parse Markdown without writing or calling OpenAI |
 | `pnpm knowledge:ingest`              | Generate embeddings and store knowledge chunks   |
 | `pnpm eval:retrieval`                | Measure top-3 retrieval quality and latency      |
+
+## Docker cleanup after a day of work
+
+For normal daily shutdown, stop only the HookLens database. Its PostgreSQL
+volume remains intact, so the next day you can start where you finished:
+
+```powershell
+pnpm db:down
+docker system df -v
+```
+
+`pnpm db:down` removes the HookLens container and network, but deliberately
+keeps the database volume and pulled image. It therefore saves little disk
+space by itself. Use `docker system df -v` first to see whether images,
+containers, volumes or build cache are actually using the space.
+
+When Docker reports unused cache or dangling images, these commands are safe
+for the HookLens database but can remove unused cache or images from other local
+projects too:
+
+```powershell
+docker builder prune -f
+docker image prune -f
+```
+
+To completely reset only HookLens's local database, run the following from the
+repository root. This permanently removes its PostgreSQL data; on the next run
+you must execute `pnpm db:up`, `pnpm db:migrate`, `pnpm db:seed` and
+`pnpm knowledge:ingest` again.
+
+```powershell
+docker compose down --volumes
+```
+
+Avoid using this as a daily command:
+
+```powershell
+docker system prune -a --volumes
+```
+
+It removes every unused Docker image, stopped container, network, build cache
+and unused volume across all your projects. Docker Desktop stores these objects
+inside its disk image, so if disk C remains large after cleanup, inspect Docker
+Desktop settings and move the **Disk image location** to drive E rather than
+moving Docker files manually. See the official [Docker cleanup guide](https://docs.docker.com/engine/manage-resources/pruning/)
+and [Docker Desktop settings](https://docs.docker.com/desktop/settings-and-maintenance/settings/).
 
 ## Day 3 API
 
@@ -201,7 +248,7 @@ It returns `409 DELIVERY_NOT_FAILED` for delivered or pending webhooks, and
 TypeScript SDK and Streamable HTTP on `http://127.0.0.1:4001/mcp`. For the
 local portfolio demo it accepts connections only from loopback hosts and
 validates the `Host` and browser `Origin` headers before handling an MCP
-request. There are no write tools in this stage.
+request.
 
 Start the API and MCP server in separate terminals:
 
@@ -220,22 +267,54 @@ Configure a compatible MCP client with the Streamable HTTP URL
 `http://127.0.0.1:4001/mcp`. Exact configuration syntax differs by client, but
 the server exposes these stable, discoverable capabilities:
 
-| Kind     | Name or URI                          | Purpose                                               |
-| -------- | ------------------------------------ | ----------------------------------------------------- |
-| Resource | `hooklens://deliveries/{deliveryId}` | Redacted delivery, event and attempt history.         |
-| Resource | `hooklens://events/{eventId}`        | Redacted event and summary of linked deliveries.      |
-| Resource | `hooklens://documents/{documentId}`  | Ingested documentation, runbook or postmortem chunks. |
-| Resource | `hooklens://runbooks/{runbookId}`    | Ingested runbook chunks only.                         |
-| Tool     | `get_delivery_details`               | Read a redacted delivery and attempts.                |
-| Tool     | `get_webhook_event`                  | Read a redacted event and delivery summary.           |
-| Tool     | `get_delivery_attempts`              | Read one delivery's attempt history.                  |
-| Tool     | `get_knowledge_document`             | Read an ingested knowledge document.                  |
+| Kind     | Name or URI                          | Purpose                                                |
+| -------- | ------------------------------------ | ------------------------------------------------------ |
+| Resource | `hooklens://deliveries/{deliveryId}` | Redacted delivery, event and attempt history.          |
+| Resource | `hooklens://events/{eventId}`        | Redacted event and summary of linked deliveries.       |
+| Resource | `hooklens://documents/{documentId}`  | Ingested documentation, runbook or postmortem chunks.  |
+| Resource | `hooklens://runbooks/{runbookId}`    | Ingested runbook chunks only.                          |
+| Tool     | `get_delivery_details`               | Read a redacted delivery and attempts.                 |
+| Tool     | `get_webhook_event`                  | Read a redacted event and delivery summary.            |
+| Tool     | `get_delivery_attempts`              | Read one delivery's attempt history.                   |
+| Tool     | `get_knowledge_document`             | Read an ingested knowledge document.                   |
+| Tool     | `search_knowledge`                   | Hybrid-search documentation, runbooks and postmortems. |
+| Tool     | `find_relevant_runbook`              | Search only operational runbooks.                      |
+| Tool     | `diagnose_delivery_failure`          | Generate a redacted diagnosis with cited sources.      |
+| Tool     | `retry_webhook_delivery`             | Queue a separately confirmed retry.                    |
+| Prompt   | `diagnose-webhook-failure`           | Guide evidence-based delivery diagnosis.               |
+| Prompt   | `prepare-integration-checklist`      | Prepare a sourced checklist for an event type.         |
+| Prompt   | `review-retry-storm`                 | Investigate retry-storm symptoms without retrying.     |
 
 All tool inputs are validated before use. Sensitive headers and payload fields
 whose names indicate credentials, secrets, tokens, cookies or signatures are
-masked. The next MCP stage will add knowledge search, diagnosis prompts and a
-separately confirmed retry operation; it will not make the current read-only
-tools write data.
+masked.
+
+## Day 8 MCP diagnostics and guarded retry
+
+The MCP server now runs the same hybrid knowledge search as the API, including
+event-type and category filters. `diagnose_delivery_failure` retrieves relevant
+knowledge, provides redacted delivery context to the model, and returns the
+model response with deterministic document and section sources. Payload data is
+excluded by default and remains redacted when explicitly included.
+
+The three MCP prompts are reusable workflows for compatible AI clients. They
+instruct the client to gather evidence first, cite sources and never retry a
+webhook as part of diagnosis.
+
+`retry_webhook_delivery` is the only write tool. It requires all of:
+
+- explicit `confirmed: true` from the client after the user approves the retry;
+- a new UUID `idempotencyKey`;
+- a local API process running at `MCP_API_URL`;
+- `MCP_OPERATOR_ENABLED=true` in the ignored local `.env` file.
+
+The tool delegates to the existing API retry endpoint instead of duplicating
+business rules. That preserves its role check, delivery-state check, three-retry
+limit, idempotency and audit log. It only queues a pending attempt; it does not
+perform an external webhook HTTP request. Leave `MCP_OPERATOR_ENABLED=false` for
+normal read-only use. This environment flag is a portfolio-demo permission
+boundary, not production authentication; a production deployment needs real
+identity and authorization controls.
 
 ## Delivery plan and development log
 
@@ -330,6 +409,19 @@ previous one is committed.
 - Kept all write operations, including webhook retry, outside the MCP server
   until a separate confirmation flow is added.
 - Next: add MCP knowledge search, diagnosis prompts and guarded retry.
+
+### Day 8 - MCP diagnosis and guarded retry
+
+- Added MCP knowledge search, runbook retrieval and source-backed delivery
+  diagnosis with the existing embedding, PostgreSQL and OpenAI setup.
+- Added three reusable MCP prompts that keep diagnosis evidence-based and
+  prohibit automatic retry.
+- Added the separately confirmed MCP retry tool, which delegates to the API so
+  role checks, idempotency, retry limits and the audit log remain consistent.
+- Documented normal Docker shutdown, targeted cleanup, full HookLens database
+  reset and the risks of global Docker pruning.
+- Next: build the Next.js administrative interface for deliveries, diagnosis,
+  knowledge and MCP capabilities.
 
 ## Development-log template
 
