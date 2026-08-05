@@ -20,9 +20,9 @@ PostgreSQL with pgvector, and Markdown source files in `knowledge/`.
 
 ## Current stage
 
-**Stage 6 adds hybrid retrieval and AI diagnosis.** The API combines pgvector
-semantic search with PostgreSQL full-text search, then produces a source-backed
-diagnosis for a failed webhook delivery.
+**Stage 7 adds the read-only MCP foundation.** A separate Streamable HTTP
+server exposes redacted delivery data and knowledge documents to compatible AI
+clients without granting any write capability.
 
 1. In PowerShell, run `Copy-Item .env.example .env`.
 2. Run `pnpm install`.
@@ -35,7 +35,8 @@ diagnosis for a failed webhook delivery.
 9. Run `pnpm db:migrate` to add the full-text-search index.
 10. Run `pnpm eval:retrieval` to measure retrieval quality against the fixed fixture.
 11. Run `pnpm dev`, then open `http://localhost:4000/health`.
-12. Run `pnpm check && pnpm build`.
+12. In a second terminal, run `pnpm mcp:dev`, then open `http://127.0.0.1:4001/health`.
+13. Run `pnpm check && pnpm build`.
 
 The Prisma commands use Node 22 to read `DATABASE_URL` directly from the root
 `.env` file, so the first step must be completed before generating the client or
@@ -48,7 +49,9 @@ colliding with a local PostgreSQL instance on the standard port `5432`.
 | ------------------------------------ | ------------------------------------------------ |
 | `pnpm check`                         | Check formatting for the current stage           |
 | `pnpm dev`                           | Run the minimal Fastify API at port 4000         |
-| `pnpm build`                         | Compile the current API                          |
+| `pnpm mcp:dev`                       | Run the local read-only MCP server at port 4001  |
+| `pnpm mcp:start`                     | Run the compiled MCP server                      |
+| `pnpm build`                         | Compile the API and MCP applications             |
 | `pnpm db:up`                         | Start the local PostgreSQL + pgvector container  |
 | `pnpm db:down`                       | Stop the local database container                |
 | `pnpm db:generate`                   | Generate the Prisma Client from the schema       |
@@ -192,6 +195,48 @@ The response includes the diagnosis text and a deterministic `sources` list.
 It returns `409 DELIVERY_NOT_FAILED` for delivered or pending webhooks, and
 `503 DIAGNOSIS_UNAVAILABLE` when the AI service is not configured or reachable.
 
+## Day 7 MCP read-only foundation
+
+`apps/mcp` is a separate Model Context Protocol server. It uses the official
+TypeScript SDK and Streamable HTTP on `http://127.0.0.1:4001/mcp`. For the
+local portfolio demo it accepts connections only from loopback hosts and
+validates the `Host` and browser `Origin` headers before handling an MCP
+request. There are no write tools in this stage.
+
+Start the API and MCP server in separate terminals:
+
+```powershell
+pnpm dev
+pnpm mcp:dev
+```
+
+Then check the MCP process independently:
+
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:4001/health"
+```
+
+Configure a compatible MCP client with the Streamable HTTP URL
+`http://127.0.0.1:4001/mcp`. Exact configuration syntax differs by client, but
+the server exposes these stable, discoverable capabilities:
+
+| Kind     | Name or URI                          | Purpose                                               |
+| -------- | ------------------------------------ | ----------------------------------------------------- |
+| Resource | `hooklens://deliveries/{deliveryId}` | Redacted delivery, event and attempt history.         |
+| Resource | `hooklens://events/{eventId}`        | Redacted event and summary of linked deliveries.      |
+| Resource | `hooklens://documents/{documentId}`  | Ingested documentation, runbook or postmortem chunks. |
+| Resource | `hooklens://runbooks/{runbookId}`    | Ingested runbook chunks only.                         |
+| Tool     | `get_delivery_details`               | Read a redacted delivery and attempts.                |
+| Tool     | `get_webhook_event`                  | Read a redacted event and delivery summary.           |
+| Tool     | `get_delivery_attempts`              | Read one delivery's attempt history.                  |
+| Tool     | `get_knowledge_document`             | Read an ingested knowledge document.                  |
+
+All tool inputs are validated before use. Sensitive headers and payload fields
+whose names indicate credentials, secrets, tokens, cookies or signatures are
+masked. The next MCP stage will add knowledge search, diagnosis prompts and a
+separately confirmed retry operation; it will not make the current read-only
+tools write data.
+
 ## Delivery plan and development log
 
 ### Stage 1 — Foundation (complete)
@@ -275,6 +320,16 @@ previous one is committed.
 - Added a fixed retrieval-evaluation fixture, no-answer check and
   `pnpm eval:retrieval` regression command.
 - Next: expose the same read-only operations through an MCP server.
+
+### Day 7 - MCP read-only foundation
+
+- Added a separate `apps/mcp` Streamable HTTP server using the official MCP
+  TypeScript SDK and local host/origin validation.
+- Added redacted delivery, event, knowledge-document and runbook resources,
+  together with four Zod-validated read-only tools.
+- Kept all write operations, including webhook retry, outside the MCP server
+  until a separate confirmation flow is added.
+- Next: add MCP knowledge search, diagnosis prompts and guarded retry.
 
 ## Development-log template
 

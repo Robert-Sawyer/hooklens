@@ -11,9 +11,10 @@ start a later stage before the current commit is reviewed and pushed.
 | 4     | Operator retry guard, idempotency, limits and audit log                               | `feat(api): add safe webhook retry workflow`                  |
 | 5     | Markdown documents, parser, heading chunking and embeddings                           | `feat(rag): ingest knowledge documents into pgvector`         |
 | 6     | Hybrid search, source-backed diagnosis and retrieval evaluation                       | `feat(rag): diagnose delivery failures with hybrid retrieval` |
-| 7     | MCP resources, read-only tools, guarded retry tool and prompts                        | `feat(mcp): expose HookLens diagnostics over Streamable HTTP` |
-| 8     | Next.js deliveries, detail, diagnosis, knowledge and MCP views                        | `feat(web): add HookLens admin console`                       |
-| 9     | Unit tests, Cypress scenario, README screenshots and CI expansion                     | `test: add portfolio-quality verification`                    |
+| 7     | MCP Streamable HTTP server, resources and redacted read-only tools                    | `feat(mcp): add read-only HookLens MCP server`                |
+| 8     | MCP knowledge/diagnosis tools, prompts and guarded retry confirmation                 | `feat(mcp): expose HookLens diagnosis workflows over MCP`     |
+| 9     | Next.js deliveries, detail, diagnosis, knowledge and MCP views                        | `feat(web): add HookLens admin console`                       |
+| 10    | Unit tests, Cypress scenario, README screenshots and CI expansion                     | `test: add portfolio-quality verification`                    |
 
 ## Rule for every stage
 

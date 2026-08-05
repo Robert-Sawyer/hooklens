@@ -42,6 +42,31 @@ importers:
         specifier: ^5.8.3
         version: 5.9.3
 
+  apps/mcp:
+    dependencies:
+      "@modelcontextprotocol/node":
+        specifier: 2.0.0
+        version: 2.0.0(@modelcontextprotocol/server@2.0.0)(hono@4.13.0)
+      "@modelcontextprotocol/server":
+        specifier: 2.0.0
+        version: 2.0.0
+      "@prisma/client":
+        specifier: 6.19.3
+        version: 6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
+    devDependencies:
+      "@types/node":
+        specifier: ^22.15.18
+        version: 22.20.1
+      tsx:
+        specifier: ^4.19.4
+        version: 4.23.1
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+
 packages:
   "@esbuild/aix-ppc64@0.28.1":
     resolution:
@@ -312,6 +337,42 @@ packages:
       {
         integrity: sha512-INS+6gh91cLUjB+PVHfu1UqcB76Sqtpyp7bnL+FYojhjygvOPA9ctiD/JDKsyD9Xgu4hUhCSJBPig/w7duNajw==,
       }
+
+  "@hono/node-server@1.19.17":
+    resolution:
+      {
+        integrity: sha512-dSneS5qhiauZWGDCeK4o695Xd9nUNjviSZCMQrj10eetr8Uln1ucn6bbphOM6UynAMMtNIzZNSpL9vnASJwrPQ==,
+      }
+    engines: { node: ">=18.14.1" }
+    peerDependencies:
+      hono: ^4
+
+  "@modelcontextprotocol/core@2.0.0":
+    resolution:
+      {
+        integrity: sha512-pJCEwGG7Lfr/+PQp9ZTwKXNeO5wzbfKL7H3MYpCorM4oFBoQrdjnBgEoqG+RjhsvS1FKrDbKux+M1HhlnGWqcA==,
+      }
+    engines: { node: ">=20" }
+
+  "@modelcontextprotocol/node@2.0.0":
+    resolution:
+      {
+        integrity: sha512-Y4hAC2XdGDUdDOCbLDOCA4+aL3NUldjsOWlDL/YwpAxrPhRm1xHd7lZ+mLacvZ9t3PaH28wgNoaLQGrIk1P2pg==,
+      }
+    engines: { node: ">=20" }
+    peerDependencies:
+      "@modelcontextprotocol/server": ^2.0.0
+      hono: ^4.11.4
+    peerDependenciesMeta:
+      hono:
+        optional: true
+
+  "@modelcontextprotocol/server@2.0.0":
+    resolution:
+      {
+        integrity: sha512-YhHWdHfpFMQfd0prsEnxKeS3Qz3ytIGmsS0sth4KDjnacIT7hxk6hXHkJ9KysxlkvTM+WZAtQbbcUhdoP4Hvtw==,
+      }
+    engines: { node: ">=20" }
 
   "@pinojs/redact@0.4.0":
     resolution:
@@ -604,6 +665,13 @@ packages:
         integrity: sha512-L5bGsVkxJbJgdnwyuheIunkGatUF/zssUoxxjACCseZYAVbaqdh9Tsmmlkl8vYan09H7sbvKt4pS8GqKLBrEzA==,
       }
     hasBin: true
+
+  hono@4.13.0:
+    resolution:
+      {
+        integrity: sha512-jhunvfHWxd7J5EFfSgH4xsYJzSe/lfqbUCxiyyeaQasUsXeEHXtzVid+7EOGByc5JnFa23SSFL3Y2RV/z1T+eQ==,
+      }
+    engines: { node: ">=16.9.0" }
 
   ipaddr.js@2.4.0:
     resolution:
@@ -910,6 +978,12 @@ packages:
         integrity: sha512-HhY1oqzWCQWuUqvBFnsyrtZRhyPeR7SUGv+C4+MsisMuVfSPx8HpwWqH8tRahSlt6M3PiFAcoeFhZAqIXTxoSg==,
       }
 
+  zod@4.4.3:
+    resolution:
+      {
+        integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==,
+      }
+
 snapshots:
   "@esbuild/aix-ppc64@0.28.1":
     optional: true
@@ -1011,6 +1085,26 @@ snapshots:
     dependencies:
       "@fastify/forwarded": 3.0.2
       ipaddr.js: 2.4.0
+
+  "@hono/node-server@1.19.17(hono@4.13.0)":
+    dependencies:
+      hono: 4.13.0
+
+  "@modelcontextprotocol/core@2.0.0":
+    dependencies:
+      zod: 4.4.3
+
+  "@modelcontextprotocol/node@2.0.0(@modelcontextprotocol/server@2.0.0)(hono@4.13.0)":
+    dependencies:
+      "@hono/node-server": 1.19.17(hono@4.13.0)
+      "@modelcontextprotocol/server": 2.0.0
+    optionalDependencies:
+      hono: 4.13.0
+
+  "@modelcontextprotocol/server@2.0.0":
+    dependencies:
+      "@modelcontextprotocol/core": 2.0.0
+      zod: 4.4.3
 
   "@pinojs/redact@0.4.0": {}
 
@@ -1219,6 +1313,8 @@ snapshots:
       nypm: 0.6.9
       pathe: 2.0.3
 
+  hono@4.13.0: {}
+
   ipaddr.js@2.4.0: {}
 
   jiti@2.7.0: {}
@@ -1356,3 +1452,5 @@ snapshots:
   undici-types@6.21.0: {}
 
   zod@3.24.3: {}
+
+  zod@4.4.3: {}
