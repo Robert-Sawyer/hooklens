@@ -1,7 +1,9 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
 import { ZodError } from "zod";
+import { diagnoseDeliveryFailure } from "./delivery-diagnosis.service.js";
 import { deliveryRepository } from "./delivery.repository.js";
 import {
+  diagnosisQuerySchema,
   deliveryIdParamsSchema,
   deliveryListQuerySchema,
   intakeWebhookSchema,
@@ -127,4 +129,61 @@ export async function deliveryRoutes(app: FastifyInstance) {
       },
     });
   });
+
+  app.post(
+    "/api/v1/deliveries/:deliveryId/diagnosis",
+    async (request, reply) => {
+      const parsedParams = deliveryIdParamsSchema.safeParse(request.params);
+      const parsedQuery = diagnosisQuerySchema.safeParse(request.query);
+
+      if (!parsedParams.success) {
+        return sendValidationError(reply, parsedParams.error);
+      }
+
+      if (!parsedQuery.success) {
+        return sendValidationError(reply, parsedQuery.error);
+      }
+
+      try {
+        const result = await diagnoseDeliveryFailure({
+          deliveryId: parsedParams.data.deliveryId,
+          includePayload: parsedQuery.data.includePayload,
+          apiKey: process.env.OPENAI_API_KEY,
+          embeddingModel:
+            process.env.OPENAI_EMBEDDING_MODEL ?? "text-embedding-3-small",
+          diagnosisModel: process.env.OPENAI_DIAGNOSIS_MODEL ?? "gpt-5.6-terra",
+        });
+
+        if (result.kind === "not-found") {
+          return reply.status(404).send({
+            error: {
+              code: "NOT_FOUND",
+              message: "Delivery not found.",
+            },
+          });
+        }
+
+        if (result.kind === "not-failed") {
+          return reply.status(409).send({
+            error: {
+              code: "DELIVERY_NOT_FAILED",
+              message: `Only failed deliveries can be diagnosed. Current status: ${result.status}.`,
+            },
+          });
+        }
+
+        return reply.send({ data: result });
+      } catch (error) {
+        request.log.error(error, "Delivery diagnosis failed");
+
+        return reply.status(503).send({
+          error: {
+            code: "DIAGNOSIS_UNAVAILABLE",
+            message:
+              "The diagnosis service is temporarily unavailable. Check the local AI configuration and try again.",
+          },
+        });
+      }
+    },
+  );
 }

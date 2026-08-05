@@ -12,7 +12,8 @@
     "db:generate": "node --env-file=../../.env scripts/run-prisma.mjs generate",
     "db:migrate": "node --env-file=../../.env scripts/run-prisma.mjs migrate deploy",
     "db:seed": "node --env-file=../../.env --import tsx src/scripts/seed.ts",
-    "knowledge:ingest": "node --env-file=../../.env --import tsx src/scripts/ingest-knowledge.ts"
+    "knowledge:ingest": "node --env-file=../../.env --import tsx src/scripts/ingest-knowledge.ts",
+    "eval:retrieval": "node --env-file=../../.env --import tsx src/scripts/evaluate-retrieval.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.0",

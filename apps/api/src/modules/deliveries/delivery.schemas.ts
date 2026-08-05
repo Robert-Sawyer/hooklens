@@ -43,6 +43,14 @@ export const retryDeliverySchema = z.object({
   idempotencyKey: z.string().uuid(),
 });
 
+export const diagnosisQuerySchema = z.object({
+  includePayload: z
+    .union([z.literal("true"), z.literal("false")])
+    .optional()
+    .transform((value) => value === "true"),
+});
+
 export type IntakeWebhookInput = z.infer<typeof intakeWebhookSchema>;
 export type DeliveryListQuery = z.infer<typeof deliveryListQuerySchema>;
 export type RetryDeliveryInput = z.infer<typeof retryDeliverySchema>;
+export type DiagnosisQuery = z.infer<typeof diagnosisQuerySchema>;
