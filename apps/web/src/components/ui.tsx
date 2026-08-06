@@ -65,6 +65,10 @@ export function ErrorPanel({ message }: { message: string }) {
   );
 }
 
+export function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
 export function LoadingRows() {
   return (
     <div className="space-y-3 p-5">

@@ -478,6 +478,8 @@ previous one is committed.
   MCP-capabilities views, all backed by the existing Fastify API.
 - Added read-only knowledge-document endpoints, local CORS configuration and
   API-boundary redaction for delivery data shown in a browser.
+- Removed redundant browser-side error guards while retaining safe fallback
+  messages, and raised the direct PostCSS dependency to version 8.5.25.
 - Verified the API health, seeded delivery list and knowledge list responses,
   TypeScript checks for API and web, and a production Next.js build.
 - Next: add unit coverage, an end-to-end Cypress scenario, screenshots and CI
