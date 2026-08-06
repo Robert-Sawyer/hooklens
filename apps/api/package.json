@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
+    "dev": "node --env-file=../../.env --import tsx --watch src/server.ts",
     "build": "tsc -p tsconfig.json",
-    "start": "node dist/server.js",
+    "start": "node --env-file=../../.env dist/server.js",
     "lint": "tsc --noEmit -p tsconfig.json",
     "prisma": "node --env-file=../../.env scripts/run-prisma.mjs",
     "db:generate": "node --env-file=../../.env scripts/run-prisma.mjs generate",
@@ -16,6 +16,7 @@
     "eval:retrieval": "node --env-file=../../.env --import tsx src/scripts/evaluate-retrieval.ts"
   },
   "dependencies": {
+    "@fastify/cors": "^11.3.0",
     "@prisma/client": "^6.19.0",
     "dotenv": "^16.5.0",
     "fastify": "^5.3.2",

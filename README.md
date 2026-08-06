@@ -20,10 +20,10 @@ PostgreSQL with pgvector, and Markdown source files in `knowledge/`.
 
 ## Current stage
 
-**Stage 8 adds MCP diagnostics and a guarded retry operation.** A separate
-Streamable HTTP server exposes redacted delivery data, knowledge retrieval and
-source-backed diagnosis to compatible AI clients. Retry remains separately
-confirmed and disabled by default.
+**Stage 9 adds the HookLens administrative console.** The Next.js interface
+shows redacted delivery data, evidence-based diagnosis, ingested knowledge and
+the MCP capabilities in one local operational workspace. A retry remains an
+explicitly confirmed operator action.
 
 1. In PowerShell, run `Copy-Item .env.example .env`.
 2. Run `pnpm install`.
@@ -36,8 +36,9 @@ confirmed and disabled by default.
 9. Run `pnpm db:migrate` to add the full-text-search index.
 10. Run `pnpm eval:retrieval` to measure retrieval quality against the fixed fixture.
 11. Run `pnpm dev`, then open `http://localhost:4000/health`.
-12. In a second terminal, run `pnpm mcp:dev`, then open `http://127.0.0.1:4001/health`.
-13. Run `pnpm check && pnpm build`.
+12. In a second terminal, run `pnpm web:dev`, then open `http://127.0.0.1:3000/deliveries`.
+13. Optionally, in a third terminal run `pnpm mcp:dev`, then open `http://127.0.0.1:4001/health`.
+14. Run `pnpm check && pnpm build`.
 
 The Prisma commands use Node 22 to read `DATABASE_URL` directly from the root
 `.env` file, so the first step must be completed before generating the client or
@@ -50,9 +51,11 @@ colliding with a local PostgreSQL instance on the standard port `5432`.
 | ------------------------------------ | ------------------------------------------------ |
 | `pnpm check`                         | Check formatting for the current stage           |
 | `pnpm dev`                           | Run the minimal Fastify API at port 4000         |
+| `pnpm web:dev`                       | Run the Next.js admin console at port 3000       |
+| `pnpm web:start`                     | Run the compiled Next.js admin console           |
 | `pnpm mcp:dev`                       | Run the local MCP server at port 4001            |
 | `pnpm mcp:start`                     | Run the compiled MCP server                      |
-| `pnpm build`                         | Compile the API and MCP applications             |
+| `pnpm build`                         | Compile the API, MCP server and admin console    |
 | `pnpm db:up`                         | Start the local PostgreSQL + pgvector container  |
 | `pnpm db:down`                       | Stop the local database container                |
 | `pnpm db:generate`                   | Generate the Prisma Client from the schema       |
@@ -119,6 +122,8 @@ The API runs at `http://localhost:4000`.
 | `GET`  | `/api/v1/deliveries/:deliveryId`           | Return a delivery, its source event and all attempts.                    |
 | `POST` | `/api/v1/deliveries/:deliveryId/retry`     | Queue a guarded retry request for a failed delivery.                     |
 | `POST` | `/api/v1/deliveries/:deliveryId/diagnosis` | Retrieve knowledge and generate a source-backed diagnosis for a failure. |
+| `GET`  | `/api/v1/knowledge/documents`              | List ingested documents; accepts an optional `category` filter.          |
+| `GET`  | `/api/v1/knowledge/documents/:documentId`  | Return an ingested document with its ordered chunks.                     |
 
 Example intake request in PowerShell:
 
@@ -316,6 +321,48 @@ normal read-only use. This environment flag is a portfolio-demo permission
 boundary, not production authentication; a production deployment needs real
 identity and authorization controls.
 
+## Day 9 Next.js admin console
+
+`apps/web` is a standalone Next.js application that uses Tailwind CSS and
+TanStack Query to call the Fastify API. It is intentionally a separate
+workspace app: the browser never receives a database connection, embedding API
+key or MCP operator flag.
+
+Start the local operational console alongside the API:
+
+```powershell
+pnpm dev
+pnpm web:dev
+```
+
+Then open `http://127.0.0.1:3000/deliveries`. The console has four portfolio
+views:
+
+- **Deliveries** — paginated list with status and event-type filters.
+- **Delivery details** — masked request data, receiver response, attempt
+  timeline, sourced AI diagnosis and a separately confirmed local retry.
+- **Knowledge** — document category filter, embedding status and stored
+  heading chunks.
+- **MCP** — a concise inventory of the server resources, tools and prompts.
+
+The API now permits browser requests only from the comma-separated origins in
+`WEB_ORIGIN`; its local default accepts `http://localhost:3000` and
+`http://127.0.0.1:3000`. The optional browser-facing API base URL is
+`NEXT_PUBLIC_API_URL`, defaulting to `http://127.0.0.1:4000`. Values beginning
+with `NEXT_PUBLIC_` are bundled into browser code, so only a non-secret URL may
+be placed there.
+
+`pnpm web:dev` and `pnpm build` prepare Next.js's generated route-type file for
+their respective mode before starting. This avoids a Windows `EPERM` collision
+when Next.js switches between `.next/dev` and production type declarations.
+
+Before delivery data reaches the browser, the API masks credential-shaped
+headers and payload fields, receiver response secrets and URL query strings.
+This repeats the existing safety boundary at the web API, instead of relying on
+the UI to hide sensitive data. The retry button sends the development-only
+operator header only after the user checks an explicit confirmation box; it
+still invokes the original API guard and never sends an outbound webhook.
+
 ## Delivery plan and development log
 
 ### Stage 1 — Foundation (complete)
@@ -422,6 +469,19 @@ previous one is committed.
   reset and the risks of global Docker pruning.
 - Next: build the Next.js administrative interface for deliveries, diagnosis,
   knowledge and MCP capabilities.
+
+### Day 9 - Administrative console
+
+- Added the separate Next.js web workspace with Tailwind CSS and TanStack
+  Query, plus shared root commands to run, check and build it.
+- Added deliveries, delivery-detail, diagnosis, safe-retry, knowledge-base and
+  MCP-capabilities views, all backed by the existing Fastify API.
+- Added read-only knowledge-document endpoints, local CORS configuration and
+  API-boundary redaction for delivery data shown in a browser.
+- Verified the API health, seeded delivery list and knowledge list responses,
+  TypeScript checks for API and web, and a production Next.js build.
+- Next: add unit coverage, an end-to-end Cypress scenario, screenshots and CI
+  checks for the portfolio workflow.
 
 ## Development-log template
 
