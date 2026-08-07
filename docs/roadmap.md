@@ -1,22 +1,32 @@
-# HookLens delivery roadmap
+# Delivery roadmap
 
-Each stage is intentionally small enough for one focused GitHub commit. Do not
-start a later stage before the current commit is reviewed and pushed.
+The functional HookLens portfolio application is complete through Stage 9. Stage 10 adds the quality signals that make the repository easier to evaluate during a technical recruitment process.
 
-| Stage | Deliverable                                                                           | Suggested commit                                              |
-| ----- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| 1     | Workspace, basic API packages, Fastify `GET /health`, pgvector Compose, CI and README | `chore: bootstrap HookLens workspace and API`                 |
-| 2     | Prisma schema, pgvector extension and migration for events, deliveries and attempts   | `feat(api): add webhook delivery data model`                  |
-| 3     | Fastify intake, delivery list/detail endpoints and seed data                          | `feat(api): add webhook intake and delivery queries`          |
-| 4     | Operator retry guard, idempotency, limits and audit log                               | `feat(api): add safe webhook retry workflow`                  |
-| 5     | Markdown documents, parser, heading chunking and embeddings                           | `feat(rag): ingest knowledge documents into pgvector`         |
-| 6     | Hybrid search, source-backed diagnosis and retrieval evaluation                       | `feat(rag): diagnose delivery failures with hybrid retrieval` |
-| 7     | MCP Streamable HTTP server, resources and redacted read-only tools                    | `feat(mcp): add read-only HookLens MCP server`                |
-| 8     | MCP knowledge/diagnosis tools, prompts and guarded retry confirmation                 | `feat(mcp): expose HookLens diagnosis workflows over MCP`     |
-| 9     | Next.js deliveries, detail, diagnosis, knowledge and MCP views                        | `feat(web): add HookLens admin console`                       |
-| 10    | Unit tests, Cypress scenario, README screenshots and CI expansion                     | `test: add portfolio-quality verification`                    |
+| Stage | Status      | Deliverable                                                                                  |
+| ----- | ----------- | -------------------------------------------------------------------------------------------- |
+| 1     | Complete    | Workspace, Fastify health endpoint, Docker PostgreSQL + pgvector, CI and base documentation. |
+| 2     | Complete    | Prisma schema and migrations for events, deliveries and attempts.                            |
+| 3     | Complete    | Webhook intake, delivery list/detail APIs and deterministic seed data.                       |
+| 4     | Complete    | Guarded retry, idempotency, audit log and retry limit.                                       |
+| 5     | Complete    | Markdown knowledge, heading chunking, embeddings and pgvector storage.                       |
+| 6     | Complete    | Hybrid retrieval, source-backed diagnosis and retrieval evaluation.                          |
+| 7     | Complete    | Read-only MCP server with resources and tools.                                               |
+| 8     | Complete    | MCP search, diagnosis, prompts and confirmed retry adapter.                                  |
+| 9     | Complete    | Next.js delivery, diagnosis, knowledge and MCP administration views.                         |
+| 10    | In progress | Unit coverage, web tests, Cypress journey, screenshots and final CI expansion.               |
 
-## Rule for every stage
+## Stage 10 remaining deliveries
 
-Before committing, update the `Development log` section in `README.md` with
-what changed, what was verified and the next small deliverable.
+1. **API unit tests — complete.** Vitest covers retry guards, redaction, source-backed diagnosis and Markdown chunking; the API suite runs in pull-request CI.
+2. **Web component tests.** Add React Testing Library coverage for loading, error, diagnosis-source and retry-confirmation states.
+3. **End-to-end scenario.** Add a Cypress journey from seeded failed delivery to diagnosis and confirmed retry, without external webhook delivery.
+4. **Portfolio finish.** Add screenshots, a concise demo walkthrough and Cypress CI artifacts.
+
+## Rule for future deliveries
+
+Keep a branch focused on one deliverable. Before opening a pull request:
+
+1. update the relevant document and [development log](development-log.md);
+2. run the smallest relevant verification command locally;
+3. run `pnpm.cmd check`, `pnpm.cmd test` and `pnpm.cmd build` when the local environment is available;
+4. describe any deliberate scope limit, especially one related to safety or external operations.
