@@ -64,6 +64,12 @@ Each delivery is intentionally small enough for one focused branch and pull requ
 - Tightened `Authorization: Bearer` redaction to produce one consistent marker in API and MCP output.
 - Added API tests to the pull-request quality workflow; verified 15 passing tests without Docker, PostgreSQL or an OpenAI API key.
 
+## Day 11 - Web component tests
+
+- Added a jsdom Vitest setup with React Testing Library, user interaction helpers and isolated React Query clients.
+- Added tests for delivery loading, request errors and filter input; knowledge-document category selection; diagnosis sources; and explicit retry confirmation.
+- Added the web suite to the root test command and pull-request quality workflow; the tests use mocked API calls and need no Docker, PostgreSQL or OpenAI key.
+
 ## Documentation reorganization
 
 - Replaced the long root README with a quick-start page and a direct shutdown/reset section.

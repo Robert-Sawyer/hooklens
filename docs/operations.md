@@ -32,7 +32,8 @@ This document is the detailed counterpart to the [quick start in the root README
 | `pnpm.cmd knowledge:ingest`              | Generate embeddings and store knowledge chunks. Requires `OPENAI_API_KEY`.                                               |
 | `pnpm.cmd eval:retrieval`                | Evaluate fixed retrieval questions, expected sources and no-answer behavior. Requires ingested knowledge and an API key. |
 | `pnpm.cmd test:api`                      | Type-check and run API unit tests. No Docker or OpenAI key required.                                                     |
-| `pnpm.cmd test`                          | Run the currently available workspace test suite.                                                                        |
+| `pnpm.cmd test:web`                      | Type-check and run jsdom component tests with mocked API calls. No Docker or OpenAI key required.                        |
+| `pnpm.cmd test`                          | Run the API and web test suites.                                                                                         |
 | `pnpm.cmd check`                         | Check Prettier and TypeScript in every workspace application.                                                            |
 | `pnpm.cmd build`                         | Build API, MCP and Next.js applications.                                                                                 |
 | `pnpm.cmd format`                        | Apply Prettier formatting.                                                                                               |

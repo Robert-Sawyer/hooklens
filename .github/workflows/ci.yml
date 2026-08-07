@@ -20,5 +20,5 @@ jobs:
       - run: cp .env.example .env
       - run: pnpm db:generate
       - run: pnpm check
-      - run: pnpm test:api
+      - run: pnpm test
       - run: pnpm build

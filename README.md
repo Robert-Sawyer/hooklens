@@ -89,14 +89,14 @@ endpoint for a compatible MCP client is `http://127.0.0.1:4001/mcp`.
 ### Verify the project
 
 ```powershell
-pnpm.cmd test:api
+pnpm.cmd test
 pnpm.cmd check
 pnpm.cmd build
 ```
 
-`test:api` runs the API type-check and unit tests without Docker, PostgreSQL or
-an OpenAI key. `check` validates formatting and TypeScript across the workspace;
-`build` produces the API, MCP and Next.js builds.
+`test` runs API unit tests and web component tests without Docker, PostgreSQL
+or an OpenAI key. `check` validates formatting and TypeScript across the
+workspace; `build` produces the API, MCP and Next.js builds.
 
 ## Stop, clean up and reset local state
 
