@@ -18,7 +18,7 @@ The functional HookLens portfolio application is complete through Stage 9. Stage
 ## Stage 10 remaining deliveries
 
 1. **API unit tests — complete.** Vitest covers retry guards, redaction, source-backed diagnosis and Markdown chunking; the API suite runs in pull-request CI.
-2. **Web component tests.** Add React Testing Library coverage for loading, error, diagnosis-source and retry-confirmation states.
+2. **Web component tests â€” complete.** Vitest and React Testing Library cover delivery loading and error states, filter requests, knowledge-category selection, diagnosis sources and retry confirmation; the suite runs in pull-request CI.
 3. **End-to-end scenario.** Add a Cypress journey from seeded failed delivery to diagnosis and confirmed retry, without external webhook delivery.
 4. **Portfolio finish.** Add screenshots, a concise demo walkthrough and Cypress CI artifacts.
 
