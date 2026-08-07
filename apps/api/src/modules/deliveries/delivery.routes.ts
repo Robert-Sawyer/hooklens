@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
 import { ZodError } from "zod";
 import { diagnoseDeliveryFailure } from "./delivery-diagnosis.service.js";
+import { presentDelivery } from "./delivery.presenter.js";
 import { deliveryRepository } from "./delivery.repository.js";
 import {
   diagnosisQuerySchema,
@@ -52,7 +53,7 @@ export async function deliveryRoutes(app: FastifyInstance) {
     );
 
     return reply.send({
-      data: deliveries,
+      data: deliveries.map((delivery) => presentDelivery(delivery)),
       meta: {
         page: parsedQuery.data.page,
         pageSize: parsedQuery.data.pageSize,
@@ -82,7 +83,7 @@ export async function deliveryRoutes(app: FastifyInstance) {
       });
     }
 
-    return reply.send({ data: delivery });
+    return reply.send({ data: presentDelivery(delivery) });
   });
 
   app.post("/api/v1/deliveries/:deliveryId/retry", async (request, reply) => {
