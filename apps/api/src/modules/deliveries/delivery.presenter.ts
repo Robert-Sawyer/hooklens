@@ -3,7 +3,7 @@ const SENSITIVE_FIELD_PATTERN =
 const BEARER_TOKEN_PATTERN = /\bBearer\s+[A-Za-z0-9._~+/=-]+/gi;
 const SECRET_VALUE_PATTERN = /\b(sk|rk|pk|whsec)_[A-Za-z0-9_-]+\b/gi;
 const NAMED_VALUE_PATTERN =
-  /\b(authorization|api[-_]?key|token|secret|signature|password|cookie)\s*[:=]\s*[^\s,;]+/gi;
+  /\b(authorization|api[-_]?key|token|secret|signature|password|cookie)\s*[:=]\s*(?:Bearer\s+)?[^\s,;]+/gi;
 
 function redactText(value: string) {
   return value

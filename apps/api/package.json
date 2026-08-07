@@ -8,6 +8,9 @@
     "build": "tsc -p tsconfig.json",
     "start": "node --env-file=../../.env dist/server.js",
     "lint": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:types": "tsc --noEmit -p tsconfig.test.json",
     "prisma": "node --env-file=../../.env scripts/run-prisma.mjs",
     "db:generate": "node --env-file=../../.env scripts/run-prisma.mjs generate",
     "db:migrate": "node --env-file=../../.env scripts/run-prisma.mjs migrate deploy",
@@ -27,6 +30,7 @@
     "@types/node": "^22.15.18",
     "prisma": "^6.19.0",
     "tsx": "^4.19.4",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vitest": "4.1.0"
   }
 }

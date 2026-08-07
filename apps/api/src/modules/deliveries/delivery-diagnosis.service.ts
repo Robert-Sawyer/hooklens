@@ -22,6 +22,16 @@ type DiagnosisSource = {
   category: "documentation" | "runbook" | "postmortem";
 };
 
+export type DeliveryDiagnosisDependencies = {
+  findDelivery: typeof deliveryRepository.findById;
+  searchKnowledge: typeof searchKnowledge;
+  diagnose: (input: {
+    apiKey: string;
+    model: string;
+    context: string;
+  }) => Promise<string>;
+};
+
 export type DeliveryDiagnosisResult =
   | { kind: "not-found" }
   | { kind: "not-failed"; status: string }
@@ -162,10 +172,21 @@ function toSources(
   return [...uniqueSources.values()];
 }
 
+const defaultDiagnosisDependencies: DeliveryDiagnosisDependencies = {
+  findDelivery: deliveryRepository.findById,
+  searchKnowledge,
+  async diagnose({ apiKey, model, context }) {
+    const diagnosisProvider = new OpenAiDiagnosisProvider(apiKey, model);
+
+    return diagnosisProvider.diagnose(context);
+  },
+};
+
 export async function diagnoseDeliveryFailure(
   options: DiagnosisOptions,
+  dependencies: DeliveryDiagnosisDependencies = defaultDiagnosisDependencies,
 ): Promise<DeliveryDiagnosisResult> {
-  const delivery = await deliveryRepository.findById(options.deliveryId);
+  const delivery = await dependencies.findDelivery(options.deliveryId);
 
   if (!delivery) {
     return { kind: "not-found" };
@@ -180,7 +201,7 @@ export async function diagnoseDeliveryFailure(
   }
 
   const retrievalQuery = createRetrievalQuery(delivery);
-  const knowledge = await searchKnowledge({
+  const knowledge = await dependencies.searchKnowledge({
     query: retrievalQuery,
     eventType: delivery.event.eventType,
     categories: ["documentation", "runbook", "postmortem"],
@@ -204,13 +225,11 @@ export async function diagnoseDeliveryFailure(
     };
   }
 
-  const diagnosisProvider = new OpenAiDiagnosisProvider(
-    options.apiKey,
-    options.diagnosisModel,
-  );
-  const diagnosis = await diagnosisProvider.diagnose(
-    createModelContext(delivery, options.includePayload, knowledge),
-  );
+  const diagnosis = await dependencies.diagnose({
+    apiKey: options.apiKey,
+    model: options.diagnosisModel,
+    context: createModelContext(delivery, options.includePayload, knowledge),
+  });
 
   return {
     kind: "diagnosed",

@@ -44,6 +44,39 @@ export const retryRejectionMessages: Record<RetryRejectionReason, string> = {
   RETRY_LIMIT_REACHED: `A delivery can be retried at most ${MAX_RETRY_COUNT} times.`,
 };
 
+type RetryEligibility = {
+  status: string;
+  retryCount: number;
+} | null;
+
+export function getRetryRejectionReason({
+  delivery,
+  actorRole,
+  confirmed,
+}: {
+  delivery: RetryEligibility;
+  actorRole: RetryActorRole;
+  confirmed: boolean;
+}): RetryRejectionReason | null {
+  if (!delivery) {
+    return "DELIVERY_NOT_FOUND";
+  }
+
+  if (actorRole !== "operator") {
+    return "FORBIDDEN";
+  }
+
+  if (!confirmed) {
+    return "CONFIRMATION_REQUIRED";
+  }
+
+  if (delivery.status !== "failed") {
+    return "DELIVERY_NOT_FAILED";
+  }
+
+  return delivery.retryCount >= MAX_RETRY_COUNT ? "RETRY_LIMIT_REACHED" : null;
+}
+
 export function resolveRetryActorRole(
   roleHeader: string | string[] | undefined,
 ): RetryActorRole {
@@ -173,17 +206,11 @@ export async function requestDeliveryRetry(
               },
             });
 
-      const rejectionReason: RetryRejectionReason | null = !delivery
-        ? "DELIVERY_NOT_FOUND"
-        : input.actorRole !== "operator"
-          ? "FORBIDDEN"
-          : !input.confirmed
-            ? "CONFIRMATION_REQUIRED"
-            : delivery.status !== "failed"
-              ? "DELIVERY_NOT_FAILED"
-              : delivery.retryCount >= MAX_RETRY_COUNT
-                ? "RETRY_LIMIT_REACHED"
-                : null;
+      const rejectionReason = getRetryRejectionReason({
+        delivery,
+        actorRole: input.actorRole,
+        confirmed: input.confirmed,
+      });
 
       if (rejectionReason) {
         const audit = await transaction.deliveryRetryAudit.create({

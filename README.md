@@ -20,10 +20,10 @@ PostgreSQL with pgvector, and Markdown source files in `knowledge/`.
 
 ## Current stage
 
-**Stage 9 adds the HookLens administrative console.** The Next.js interface
-shows redacted delivery data, evidence-based diagnosis, ingested knowledge and
-the MCP capabilities in one local operational workspace. A retry remains an
-explicitly confirmed operator action.
+**Stage 10 begins portfolio-quality verification.** The first delivery adds
+fast, database-free API unit tests for retry safety, redaction, knowledge
+parsing and source-backed diagnosis. The following small deliveries add web
+component tests, Cypress and CI coverage.
 
 1. In PowerShell, run `Copy-Item .env.example .env`.
 2. Run `pnpm install`.
@@ -55,6 +55,8 @@ colliding with a local PostgreSQL instance on the standard port `5432`.
 | `pnpm web:start`                     | Run the compiled Next.js admin console           |
 | `pnpm mcp:dev`                       | Run the local MCP server at port 4001            |
 | `pnpm mcp:start`                     | Run the compiled MCP server                      |
+| `pnpm test`                          | Run the available automated test suite           |
+| `pnpm test:api`                      | Type-check and run API unit tests                |
 | `pnpm build`                         | Compile the API, MCP server and admin console    |
 | `pnpm db:up`                         | Start the local PostgreSQL + pgvector container  |
 | `pnpm db:down`                       | Stop the local database container                |
@@ -484,6 +486,19 @@ previous one is committed.
   TypeScript checks for API and web, and a production Next.js build.
 - Next: add unit coverage, an end-to-end Cypress scenario, screenshots and CI
   checks for the portfolio workflow.
+
+### Day 10 - API unit tests
+
+- Added Vitest and separate test TypeScript configuration without emitting test
+  files into the API production build.
+- Covered retry authorization and limit rules, delivery-data redaction,
+  Markdown source chunking, and diagnosis behavior with deterministic RAG
+  sources and a mocked model dependency.
+- Tightened Authorization-header masking so a Bearer value is represented by
+  one consistent `[REDACTED]` marker in the API and MCP responses.
+- Verified the test type-check and 15 passing API unit tests without Docker,
+  PostgreSQL or an OpenAI API key; added this suite to the pull-request CI job.
+- Next: add React Testing Library coverage for the administrative console.
 
 ## Development-log template
 
