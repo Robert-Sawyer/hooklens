@@ -6,6 +6,7 @@ coverage
 *.tsbuildinfo
 cypress/screenshots/
 cypress/videos/
+cypress/results/
 .env
 .env.local
 *.log

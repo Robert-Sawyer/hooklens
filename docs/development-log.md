@@ -76,6 +76,12 @@ Each delivery is intentionally small enough for one focused branch and pull requ
 - Kept the delivery list and retry workflow connected to the real local API and PostgreSQL database; intercepted only the OpenAI-dependent diagnosis response.
 - Added explicit E2E setup, browser-install, headless and interactive commands, with an optional Cypress cache location outside the Windows system drive.
 
+## Day 13 - CI, portfolio screenshots and demo guide
+
+- Extended GitHub Actions with a PostgreSQL + pgvector service, a Cypress job and a seven-day `cypress-artifacts` artifact containing JUnit results and any failure screenshots.
+- Configured the CI job to start the API and panel, wait for both local endpoints, then run Cypress against the seeded database.
+- Added three screenshots from the live demo UI and a five-minute recruiter/reviewer presentation path to the root README.
+
 ## Documentation reorganization
 
 - Replaced the long root README with a quick-start page and a direct shutdown/reset section.

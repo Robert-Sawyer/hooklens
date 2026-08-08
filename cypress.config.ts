@@ -7,6 +7,11 @@ export default defineConfig({
     specPattern: "cypress/e2e/**/*.cy.ts",
     supportFile: false,
   },
+  reporter: "junit",
+  reporterOptions: {
+    mochaFile: "cypress/results/junit-[hash].xml",
+    toConsole: true,
+  },
   screenshotOnRunFailure: true,
   video: false,
 });

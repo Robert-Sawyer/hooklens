@@ -22,3 +22,70 @@ jobs:
       - run: pnpm check
       - run: pnpm test
       - run: pnpm build
+
+  cypress:
+    needs: quality
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: hooklens
+          POSTGRES_PASSWORD: hooklens
+          POSTGRES_DB: hooklens
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U hooklens -d hooklens"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: cp .env.example .env
+      - run: pnpm db:generate
+      - run: pnpm db:migrate
+      - run: pnpm db:seed
+      - run: pnpm e2e:install
+      - name: Start API and web application
+        run: |
+          pnpm dev > api.log 2>&1 &
+          pnpm web:dev > web.log 2>&1 &
+      - name: Wait for local application services
+        run: |
+          wait_for_url() {
+            local url="$1"
+
+            for attempt in {1..30}; do
+              if curl --fail --silent --show-error "$url" > /dev/null; then
+                return 0
+              fi
+
+              sleep 2
+            done
+
+            echo "Timed out waiting for $url"
+            return 1
+          }
+
+          wait_for_url http://127.0.0.1:4000/health
+          wait_for_url http://localhost:3000/deliveries
+      - run: pnpm e2e:run
+      - name: Upload Cypress artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-artifacts
+          path: |
+            cypress/results
+            cypress/screenshots
+            api.log
+            web.log
+          if-no-files-found: ignore
+          retention-days: 7
