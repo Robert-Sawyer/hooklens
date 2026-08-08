@@ -34,6 +34,11 @@ This document is the detailed counterpart to the [quick start in the root README
 | `pnpm.cmd test:api`                      | Type-check and run API unit tests. No Docker or OpenAI key required.                                                     |
 | `pnpm.cmd test:web`                      | Type-check and run jsdom component tests with mocked API calls. No Docker or OpenAI key required.                        |
 | `pnpm.cmd test`                          | Run the API and web test suites.                                                                                         |
+| `pnpm.cmd e2e:install`                   | Download the Cypress browser once. Set `CYPRESS_CACHE_FOLDER` first to choose its local cache location.                  |
+| `pnpm.cmd e2e:prepare`                   | Start PostgreSQL, apply migrations and reset deterministic E2E seed data.                                                |
+| `pnpm.cmd e2e:types`                     | Type-check the Cypress config and spec files.                                                                            |
+| `pnpm.cmd e2e:run`                       | Type-check and run the Cypress journey headlessly; API and web app must already be running.                              |
+| `pnpm.cmd e2e:open`                      | Open Cypress interactively; API and web app must already be running.                                                     |
 | `pnpm.cmd check`                         | Check Prettier and TypeScript in every workspace application.                                                            |
 | `pnpm.cmd build`                         | Build API, MCP and Next.js applications.                                                                                 |
 | `pnpm.cmd format`                        | Apply Prettier formatting.                                                                                               |
@@ -75,6 +80,43 @@ Start `pnpm.cmd web:dev` and optionally `pnpm.cmd mcp:dev` in separate terminals
 5. Run `pnpm.cmd eval:retrieval` to check the fixed evaluation fixture.
 
 Ingestion skips a document when its checksum, embedding model and chunk count are unchanged. Re-running it after editing Markdown updates only changed input.
+
+## Cypress end-to-end workflow
+
+The E2E suite covers the seeded `payment.completed` failure: it opens the
+delivery, displays a controlled diagnosis response with sources, verifies that
+the retry remains disabled before confirmation, then queues a real local retry
+through the API. The test does not call OpenAI and the application never sends
+an outbound webhook.
+
+Before the first run, Cypress needs a browser binary. On Windows you can move
+its cache away from the system drive for the current PowerShell session:
+
+```powershell
+$env:CYPRESS_CACHE_FOLDER = "E:\.cypress-cache"
+pnpm.cmd e2e:install
+```
+
+For every E2E run, reset the controlled database state, then start the API and
+web app in separate terminals:
+
+```powershell
+pnpm.cmd e2e:prepare
+pnpm.cmd dev
+pnpm.cmd web:dev
+```
+
+In a fourth terminal with the same `CYPRESS_CACHE_FOLDER` value, use one of:
+
+```powershell
+pnpm.cmd e2e:run
+pnpm.cmd e2e:open
+```
+
+The E2E journey changes the seeded delivery from `failed` to `pending` and
+creates a retry audit. Always run `pnpm.cmd e2e:prepare` again before repeating
+the spec. Failure screenshots are stored under `cypress/screenshots/` and are
+ignored by Git.
 
 ## Shutdown, cleanup and database reset
 

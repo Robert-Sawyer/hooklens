@@ -98,6 +98,26 @@ pnpm.cmd build
 or an OpenAI key. `check` validates formatting and TypeScript across the
 workspace; `build` produces the API, MCP and Next.js builds.
 
+### Run the Cypress end-to-end journey
+
+The Cypress scenario uses the seeded PostgreSQL delivery and the real API retry
+workflow. It intercepts only the AI diagnosis response, so it does not need an
+OpenAI key or ingested knowledge. Cypress downloads a browser once; to keep it
+off the system drive on Windows, choose a cache on another drive before the
+first install:
+
+```powershell
+$env:CYPRESS_CACHE_FOLDER = "E:\.cypress-cache"
+pnpm.cmd e2e:install
+pnpm.cmd e2e:prepare
+```
+
+Start `pnpm.cmd dev` and `pnpm.cmd web:dev` in separate terminals. In the
+terminal where `CYPRESS_CACHE_FOLDER` is set, run `pnpm.cmd e2e:run` for the
+headless test or `pnpm.cmd e2e:open` to use the Cypress application. Re-run
+`pnpm.cmd e2e:prepare` before every execution because the scenario queues one
+real, local retry in the seeded database.
+
 ## Stop, clean up and reset local state
 
 Stop the API, web and MCP terminals with `Ctrl+C`. To stop only HookLens

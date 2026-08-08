@@ -4,6 +4,8 @@ node_modules
 dist
 coverage
 *.tsbuildinfo
+cypress/screenshots/
+cypress/videos/
 .env
 .env.local
 *.log
