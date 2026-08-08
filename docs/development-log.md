@@ -70,6 +70,12 @@ Each delivery is intentionally small enough for one focused branch and pull requ
 - Added tests for delivery loading, request errors and filter input; knowledge-document category selection; diagnosis sources; and explicit retry confirmation.
 - Added the web suite to the root test command and pull-request quality workflow; the tests use mocked API calls and need no Docker, PostgreSQL or OpenAI key.
 
+## Day 12 - Cypress end-to-end journey
+
+- Added Cypress configuration and a browser-level journey from the seeded `401 Invalid signature` delivery to a source-backed diagnosis and confirmed retry.
+- Kept the delivery list and retry workflow connected to the real local API and PostgreSQL database; intercepted only the OpenAI-dependent diagnosis response.
+- Added explicit E2E setup, browser-install, headless and interactive commands, with an optional Cypress cache location outside the Windows system drive.
+
 ## Documentation reorganization
 
 - Replaced the long root README with a quick-start page and a direct shutdown/reset section.

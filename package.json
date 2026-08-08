@@ -25,9 +25,17 @@
     "db:migrate": "pnpm --filter @hooklens/api db:migrate",
     "db:seed": "pnpm --filter @hooklens/api db:seed",
     "knowledge:ingest": "pnpm --filter @hooklens/api knowledge:ingest",
-    "eval:retrieval": "pnpm --filter @hooklens/api eval:retrieval"
+    "eval:retrieval": "pnpm --filter @hooklens/api eval:retrieval",
+    "e2e:install": "cypress install",
+    "e2e:prepare": "pnpm db:up && pnpm db:migrate && pnpm db:seed",
+    "e2e:open": "cypress open",
+    "e2e:types": "tsc --noEmit -p cypress/tsconfig.json",
+    "e2e:run": "pnpm e2e:types && cypress run"
   },
   "devDependencies": {
-    "prettier": "^3.5.3"
+    "@types/node": "22.20.1",
+    "cypress": "^15.20.0",
+    "prettier": "^3.5.3",
+    "typescript": "5.9.3"
   }
 }
