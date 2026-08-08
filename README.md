@@ -55,6 +55,8 @@ The seed creates three deterministic delivery examples. The first one is a
 failed `payment.completed` webhook with `401 Invalid signature`, intended for
 the diagnosis walkthrough.
 
+![HookLens deliveries console](docs/screenshots/deliveries.png)
+
 ### Enable the full RAG demo
 
 Add a valid key only to the ignored `.env` file:
@@ -112,11 +114,49 @@ pnpm.cmd e2e:install
 pnpm.cmd e2e:prepare
 ```
 
-Start `pnpm.cmd dev` and `pnpm.cmd web:dev` in separate terminals. In the
-terminal where `CYPRESS_CACHE_FOLDER` is set, run `pnpm.cmd e2e:run` for the
-headless test or `pnpm.cmd e2e:open` to use the Cypress application. Re-run
-`pnpm.cmd e2e:prepare` before every execution because the scenario queues one
-real, local retry in the seeded database.
+Start `pnpm.cmd dev` and `pnpm.cmd web:dev` in separate terminals, then run
+`pnpm.cmd e2e:run` or `pnpm.cmd e2e:open`. Re-run `pnpm.cmd e2e:prepare`
+before every execution because the scenario queues one real, local retry in the
+seeded database. In GitHub Actions, the workflow starts these two services and
+waits for both automatically.
+
+## Present HookLens in five minutes
+
+Use this sequence for a recruiter, reviewer or project walkthrough. It starts
+with the business outcome and exposes technical details only when the audience
+wants them.
+
+1. **Set the context (30 seconds).** "HookLens helps an integration team
+   understand why a webhook was not accepted. Instead of switching between
+   logs, documentation and runbooks, the team sees the operational evidence
+   and the relevant guidance in one place."
+2. **Open Deliveries (45 seconds).** Point out the seeded
+   `payment.completed` record with `401 Invalid signature`: status, receiver
+   response and retry count make the issue understandable before anyone reads
+   raw logs.
+3. **Inspect the delivery (one minute).** Open the record and show the
+   masked request headers, payload, response and attempt timeline. Explain
+   that sensitive values are deliberately redacted and that the application
+   preserves the investigation trail.
+4. **Show the AI diagnosis (one minute).** With the optional RAG setup above
+   completed, click **Diagnose failure**. The answer connects the delivery to
+   signature documentation and an invalid-signature runbook, then shows its
+   sources. Describe it as evidence-assisted guidance, not an opaque decision.
+5. **Show the safety boundary (45 seconds).** The retry button stays disabled
+   until an operator confirms the action. A retry creates a pending local
+   attempt plus an audit entry; this demo never sends an external webhook.
+6. **Close with extensibility (one minute).** Open the **Knowledge base** to
+   show the source material and **MCP** to show that compatible AI clients can
+   use the same controlled data and operations. Mention that pull requests run
+   unit, component and browser-level tests in GitHub Actions.
+
+For a short no-key demo, use steps 1, 2, 3, 5 and 6. The automated Cypress
+journey uses a controlled diagnosis response, so it verifies the UI flow
+without making an OpenAI call.
+
+![HookLens delivery investigation](docs/screenshots/delivery-detail.png)
+
+![HookLens MCP capabilities](docs/screenshots/mcp.png)
 
 ## Stop, clean up and reset local state
 
@@ -155,8 +195,9 @@ for the full lifecycle and Windows-specific notes.
 - PostgreSQL full-text search combined with pgvector HNSW semantic search;
 - source-backed AI diagnosis with data redaction before the model call;
 - an MCP Streamable HTTP server with resources, tools and reusable prompts;
-- a Next.js administration console plus automated API tests and pull-request
-  quality checks.
+- a Next.js administration console plus API, component and Cypress browser
+  tests on pull requests; Cypress JUnit reports and failure screenshots are
+  retained as workflow artifacts.
 
 The retry operation deliberately queues a new `pending` attempt and audit record
 but does **not** send an outbound webhook. It is a safe portfolio boundary, not

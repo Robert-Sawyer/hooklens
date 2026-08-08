@@ -97,26 +97,43 @@ $env:CYPRESS_CACHE_FOLDER = "E:\.cypress-cache"
 pnpm.cmd e2e:install
 ```
 
-For every E2E run, reset the controlled database state, then start the API and
-web app in separate terminals:
+For every E2E run, reset the controlled database state:
 
 ```powershell
 pnpm.cmd e2e:prepare
+```
+
+Start the API and web app in two separate terminals:
+
+```powershell
+# Terminal 1
 pnpm.cmd dev
+```
+
+```powershell
+# Terminal 2
 pnpm.cmd web:dev
 ```
 
-In a fourth terminal with the same `CYPRESS_CACHE_FOLDER` value, use one of:
+In a third terminal with the same `CYPRESS_CACHE_FOLDER` value, use one of:
 
 ```powershell
+# Headless run
 pnpm.cmd e2e:run
+```
+
+```powershell
+# Interactive Cypress app
 pnpm.cmd e2e:open
 ```
 
 The E2E journey changes the seeded delivery from `failed` to `pending` and
 creates a retry audit. Always run `pnpm.cmd e2e:prepare` again before repeating
-the spec. Failure screenshots are stored under `cypress/screenshots/` and are
-ignored by Git.
+the spec. Failure screenshots are stored under `cypress/screenshots/` and JUnit
+reports under `cypress/results/`. Both are ignored by Git. Pull-request CI
+uploads them as the `cypress-artifacts` workflow artifact for seven days; a
+passing run therefore still has an XML report, while a failed run additionally
+includes screenshots.
 
 ## Shutdown, cleanup and database reset
 
